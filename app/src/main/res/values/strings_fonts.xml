@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="font_settings">Fonts</string>
+    <string name="font_settings_summary">Choose fonts and sizes for keyboard text</string>
+    <string name="font_local_only">Choose font files from your device. Changes apply the next time the keyboard opens.</string>
+    <string name="font_fallback_hint">Choose multiple fonts to fill missing characters in fallback order. Collection fonts use their first face. Unset choices inherit the global font.</string>
+    <string name="font_fallback_legacy_hint">On Android 6–9, only the first usable font in each list is used. Collection fonts use their first face. Unset choices inherit the global font.</string>
+    <string name="font_library">Font files</string>
+    <string name="font_import">Import font</string>
+    <string name="font_import_hint">Choose a local TTF, OTF, TTC or OTC file (up to 64 MiB)</string>
+    <string name="font_imported">Imported %1$s</string>
+    <string name="font_import_failed">Could not import font: %1$s</string>
+    <string name="font_remove">Remove imported font</string>
+    <string name="font_remove_confirm">Remove “%1$s” and clear its selections? The source file is kept.</string>
+    <string name="font_global">Global font</string>
+    <string name="font_key_main">Main key labels</string>
+    <string name="font_key_alt">Alternate key labels</string>
+    <string name="font_candidate">Candidates</string>
+    <string name="font_popup">Popup keys</string>
+    <string name="font_preedit">Preedit text</string>
+    <string name="font_choose">Choose fonts</string>
+    <string name="font_system_default">System default</string>
+    <string name="font_inherit_global">Use global font</string>
+    <string name="font_no_imports">Import a font file first, then select it here.</string>
+    <string name="font_order">Fallback order</string>
+    <string name="font_order_hint">Tap a font to move it to the first position</string>
+    <string name="font_fallback_limit">Choose up to eight fonts per list</string>
+    <string name="font_size">Font size</string>
+    <string name="font_size_value">%1$s sp</string>
+    <string name="font_original_size">Original size</string>
+    <string name="font_size_hint">Enter a size from 8 to 72 sp</string>
+    <string name="font_size_for">Font size: %1$s</string>
+    <string name="font_preview_text">Aa Bb 123 · 中文候选 · あいう · 한글</string>
+    <string name="font_reset">Reset font settings</string>
+    <string name="font_reset_hint">Restore original fonts and sizes; keep imported files</string>
+    <string name="font_reset_confirm">Restore the original fonts and sizes for all keyboard text?</string>
+</resources>

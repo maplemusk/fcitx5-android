@@ -19,6 +19,8 @@ import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.core.FcitxEvent
 import org.fcitx.fcitx5.android.daemon.FcitxConnection
 import org.fcitx.fcitx5.android.daemon.launchOnReady
+import org.fcitx.fcitx5.android.data.font.FontManager
+import org.fcitx.fcitx5.android.data.font.FontRole
 import org.fcitx.fcitx5.android.data.prefs.AppPrefs
 import org.fcitx.fcitx5.android.data.theme.Theme
 import org.fcitx.fcitx5.android.input.candidates.floating.PagedCandidatesUi
@@ -97,8 +99,13 @@ class CandidatesView(
 
     private val preeditUi = PreeditUi(ctx, theme, setupTextView)
 
+    private val setupCandidateTextView: TextView.() -> Unit = {
+        setupTextView(this)
+        FontManager.applyTo(this, FontRole.Candidate)
+    }
+
     private val candidatesUi = PagedCandidatesUi(
-        ctx, theme, setupTextView,
+        ctx, theme, setupCandidateTextView,
         onCandidateClick = { index -> fcitx.launchOnReady { it.select(index) } },
         onCandidateAction = { index, text, view -> showCandidateActionMenu(index, text, view) },
         onPrevPage = { fcitx.launchOnReady { it.offsetCandidatePage(-1) } },

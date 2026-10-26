@@ -1,0 +1,87 @@
+Font-choice derivative of upstream Fcitx5 for Android
+
+Base: fcitx5-android/fcitx5-android master
+Commit: eb5b50216e70484a009933d9519db76005f1faf3 (2026-10-13)
+Local branch: feature/font-choice
+
+This change implements local font selection similar to the fx branch's font
+feature, directly on the current upstream code. It does not merge fx commits.
+
+Usage
+
+Open Settings > Virtual keyboard > Fonts.
+1. Import TTF, OTF, TTC or OTC font files with Android's document picker.
+2. Choose a global font or separate fonts for main keys, alternate labels,
+   candidates, popup keys and preedit text. Empty role choices use the global
+   font; an empty global choice preserves the original system typeface.
+3. Select up to eight fonts per role. On Android 10+, later fonts provide glyph
+   fallback; use Fallback order to move a selected font to the first position.
+   Android 6-9 uses the first usable font. Collections use their first face.
+4. Optionally set each text role's size from 8 to 72 sp. Without an override,
+   upstream's original sizes, DIP/SP units and bold/normal styling are preserved.
+5. Previews show the selected fonts. Reopen the keyboard to apply changes to
+   existing views; hardware/floating candidate windows refresh on their next show.
+6. Original size clears a size override. Reset font settings clears all choices
+   and sizes but keeps imported files. Removing an imported font also removes
+   its selections and leaves the original source document untouched.
+
+Imported fonts are copied into private app storage with generated identifiers.
+The app never retains source URI access or accepts configured filesystem paths.
+Imports are limited to 64 MiB and validated before publication. Files and choices
+are included in the existing user-data backup; Android's existing backup policy
+also continues to apply. Before device unlock, the keyboard uses system fonts.
+
+Scope
+
+New font storage/selection code, one settings screen with English/Simplified
+Chinese/Traditional Chinese strings, small text-view integration hooks, refresh
+handling, font backup support and focused font-helper tests are the only changes.
+No new Android permissions, dependencies, network client, web editor, clipboard
+sync, updater, voice integration, package flavors or native/submodule changes.
+plugin/rime is unchanged; the font choices apply to its candidates through the
+main app's normal candidate views.
+
+Build and test
+
+Use the upstream Android build prerequisites and initialize its existing
+submodules. The toolchain/dependency versions are unchanged from upstream.
+
+  git submodule update --init --recursive
+  ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+
+To run only the font tests:
+  ./gradlew :app:testDebugUnitTest --tests 'org.fcitx.fcitx5.android.data.font.*'
+
+FontConfigTest and FontFileStoreTest exercise settings corruption, invalid IDs,
+size and fallback bounds, truncated font data, copy size limits, failed-import
+cleanup and symlink/path escape rejection. These are JVM tests, not a substitute
+for Android runtime coverage.
+
+Validation performed on 2026-10-26
+
+- :app:compileDebugKotlin and Java compilation passed.
+- All 10 font JUnit tests passed, including a final rerun after review changes.
+- The complete JVM suite had 14 passes and one failure in the existing
+  ThemeSerializationTest.version2. The same assertion at line 101 was reproduced
+  on an untouched worktree of upstream eb5b5021; no theme code was changed.
+- Resource/manifest processing passed. Font strings match across all 3 locales.
+- Full lint was blocked by the native dependency build: ECMConfig.cmake was not
+  available in this environment. No APK was assembled or tested on a device.
+- Independent source review and additional helper checks found no remaining
+  font-specific defect. Permissions, dependencies and native/plugin references
+  were verified identical to the upstream base.
+
+Manual Android verification checklist
+
+- With no font settings, compare keyboard labels/candidates/popup/preedit against
+  upstream, including bold alternate keys, floating candidates and font scaling.
+- Import a trusted Latin font and CJK font. Preview each role, select separate
+  fonts, reorder fallback and verify glyph fallback on Android 10+.
+- On Android 6-9, verify the first usable selected font and system glyph fallback.
+- Change sizes, reopen both normal and hardware keyboards, and check layout and
+  preedit cursor alignment. Reset and confirm the original defaults return.
+- Reject a non-font file, truncated file and oversized import without publishing
+  it. Remove an active font and confirm fallback after reopening the keyboard.
+- Restart the app and round-trip user-data export/import; check that font files,
+  order and selections survive. Older backups without fonts remain compatible.
+- Check pre-unlock input uses system fonts and normal settings return after unlock.

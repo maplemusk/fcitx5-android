@@ -9,6 +9,8 @@ import android.content.Context
 import androidx.core.text.buildSpannedString
 import androidx.core.text.color
 import org.fcitx.fcitx5.android.core.CandidateWord
+import org.fcitx.fcitx5.android.data.font.FontManager
+import org.fcitx.fcitx5.android.data.font.FontRole
 import org.fcitx.fcitx5.android.data.theme.Theme
 import org.fcitx.fcitx5.android.input.AutoScaleTextView
 import org.fcitx.fcitx5.android.input.keyboard.CustomGestureView
@@ -26,6 +28,7 @@ class CandidateItemUi(override val ctx: Context, val theme: Theme) : Ui {
     private val text = view(::AutoScaleTextView) {
         scaleMode = AutoScaleTextView.Mode.Proportional
         textSize = 20f // sp
+        FontManager.applyTo(this, FontRole.Candidate)
         isSingleLine = true
         gravity = gravityCenter
         setTextColor(theme.candidateTextColor)

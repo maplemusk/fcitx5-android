@@ -8,6 +8,8 @@ import android.content.Context
 import android.graphics.Rect
 import android.graphics.drawable.GradientDrawable
 import android.view.ViewOutlineProvider
+import org.fcitx.fcitx5.android.data.font.FontManager
+import org.fcitx.fcitx5.android.data.font.FontRole
 import org.fcitx.fcitx5.android.data.theme.Theme
 import org.fcitx.fcitx5.android.input.AutoScaleTextView
 import org.fcitx.fcitx5.android.input.keyboard.KeyAction
@@ -62,6 +64,7 @@ class PopupKeyboardUi(
             text = this@PopupKeyUi.text
             scaleMode = AutoScaleTextView.Mode.Proportional
             textSize = 23f
+            FontManager.applyTo(this, FontRole.Popup)
             setTextColor(theme.keyTextColor)
         }
 

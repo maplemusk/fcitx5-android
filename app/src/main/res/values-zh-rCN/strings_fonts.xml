@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="font_settings">字体</string>
+    <string name="font_settings_summary">选择键盘文字的字体和大小</string>
+    <string name="font_local_only">从设备中选择字体文件。设置将在下次打开键盘时生效。</string>
+    <string name="font_fallback_hint">可选择多个字体，按顺序补全缺失的字符。字体集合使用第一个字型。未设置的项目使用全局字体。</string>
+    <string name="font_fallback_legacy_hint">Android 6–9 仅使用列表中第一个可用的字体。字体集合使用第一个字型。未设置的项目使用全局字体。</string>
+    <string name="font_library">字体文件</string>
+    <string name="font_import">导入字体</string>
+    <string name="font_import_hint">选择 TTF、OTF、TTC 或 OTC 文件（不超过 64 MiB）</string>
+    <string name="font_imported">已导入 %1$s</string>
+    <string name="font_import_failed">无法导入字体：%1$s</string>
+    <string name="font_remove">移除已导入的字体</string>
+    <string name="font_remove_confirm">移除“%1$s”并清除其选择记录？原始文件将保留。</string>
+    <string name="font_global">全局字体</string>
+    <string name="font_key_main">按键主标签</string>
+    <string name="font_key_alt">按键副标签</string>
+    <string name="font_candidate">候选词</string>
+    <string name="font_popup">弹出按键</string>
+    <string name="font_preedit">预编辑文字</string>
+    <string name="font_choose">选择字体</string>
+    <string name="font_system_default">系统默认</string>
+    <string name="font_inherit_global">使用全局字体</string>
+    <string name="font_no_imports">请先导入字体文件，再在此选择。</string>
+    <string name="font_order">字体回退顺序</string>
+    <string name="font_order_hint">点按一个字体，将其移至首位</string>
+    <string name="font_fallback_limit">每个列表最多可选择八个字体</string>
+    <string name="font_size">字体大小</string>
+    <string name="font_size_value">%1$s sp</string>
+    <string name="font_original_size">原始大小</string>
+    <string name="font_size_hint">请输入 8 到 72 sp 的大小</string>
+    <string name="font_size_for">字体大小：%1$s</string>
+    <string name="font_preview_text">Aa Bb 123 · 中文候选 · あいう · 한글</string>
+    <string name="font_reset">重置字体设置</string>
+    <string name="font_reset_hint">恢复原始字体和大小，保留已导入的文件</string>
+    <string name="font_reset_confirm">恢复所有键盘文字的原始字体和大小？</string>
+</resources>

@@ -9,6 +9,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.Gravity
 import android.widget.TextView
@@ -53,6 +54,25 @@ class AutoScaleTextView @JvmOverloads constructor(
     private var baselineY = 0.0f
     private var textScaleX = 1.0f
     private var textScaleY = 1.0f
+
+    override fun setTypeface(tf: Typeface?) {
+        super.setTypeface(tf)
+        invalidateTextMetrics()
+    }
+
+    override fun setTextSize(unit: Int, size: Float) {
+        super.setTextSize(unit, size)
+        invalidateTextMetrics()
+    }
+
+    private fun invalidateTextMetrics() {
+        // TextView can invoke these setters from its constructor, before our
+        // cached bounds and font metrics have been initialized.
+        needsMeasureText = true
+        needsCalculateTransform = true
+        requestLayout()
+        invalidate()
+    }
 
     override fun setText(charSequence: CharSequence?, bufferType: BufferType) {
         if (charSequence == null || !text.contentEquals(charSequence)) {

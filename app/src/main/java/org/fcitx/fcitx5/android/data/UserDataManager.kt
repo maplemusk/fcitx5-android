@@ -55,6 +55,7 @@ object UserDataManager {
     private val dataBasesDir = File(appContext.applicationInfo.dataDir, "databases")
     private val externalDir = appContext.getExternalFilesDir(null)!!
     private val recentlyUsedDir = appContext.filesDir.resolve(RecentlyUsed.DIR_NAME)
+    private val fontsDir = appContext.filesDir.resolve("fonts")
 
     @OptIn(ExperimentalSerializationApi::class)
     fun export(dest: OutputStream, timestamp: Long = System.currentTimeMillis()) = runCatching {
@@ -65,6 +66,8 @@ object UserDataManager {
             writeFileTree(dataBasesDir, "databases", zipStream)
             // external
             writeFileTree(externalDir, "external", zipStream)
+            // Local fonts and their selections belong in the user data backup.
+            if (fontsDir.isDirectory) writeFileTree(fontsDir, "fonts", zipStream)
             // recently_used moved to SharedPreference and shoud not be exported
             // metadata
             zipStream.putNextEntry(ZipEntry("metadata.json"))
@@ -102,6 +105,8 @@ object UserDataManager {
                 copyDir(File(tempDir, "shared_prefs"), sharedPrefsDir)
                 copyDir(File(tempDir, "databases"), dataBasesDir)
                 copyDir(File(tempDir, "external"), externalDir)
+                // Older backups have no font directory; keep existing choices in that case.
+                if (File(tempDir, "fonts").isDirectory) copyDir(File(tempDir, "fonts"), fontsDir)
                 // keep importing recently_used for backwords compatibility
                 copyDir(File(tempDir, "recently_used"), recentlyUsedDir)
                 metadata
