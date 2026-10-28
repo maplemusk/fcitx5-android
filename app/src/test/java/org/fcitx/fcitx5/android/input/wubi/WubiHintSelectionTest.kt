@@ -17,9 +17,9 @@ class WubiHintSelectionTest {
     fun `S shows physical neighbors A and D rather than code continuations`() {
         val selection = WubiHintSelection.forKey('S')
         assertEquals(listOf('A', 'S', 'D'), letters(selection))
-        assertEquals(WubiImageRect(72, 149, 199, 289), selection?.left?.image)
-        assertEquals(WubiImageRect(199, 149, 325, 289), selection?.center?.image)
-        assertEquals(WubiImageRect(325, 149, 451, 289), selection?.right?.image)
+        assertEquals(WubiImageRect(75, 151, 196, 286), selection?.left?.image)
+        assertEquals(WubiImageRect(201, 151, 322, 286), selection?.center?.image)
+        assertEquals(WubiImageRect(327, 151, 449, 286), selection?.right?.image)
     }
 
     @Test
@@ -53,7 +53,7 @@ class WubiHintSelectionTest {
     fun `Z selects its original image tile rather than a made up text label`() {
         val selected = WubiHintSelection.forKey('z')!!
         assertEquals('Z', selected.center.key)
-        assertEquals(WubiImageRect(136, 289, 262, 428), selected.center.image)
+        assertEquals(WubiImageRect(138, 290, 259, 425), selected.center.image)
         assertNull(selected.left)
         assertEquals('X', selected.right?.key)
     }

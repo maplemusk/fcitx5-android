@@ -1,7 +1,8 @@
 Wubi06 pressed-key image hints for Fcitx5 Android
 Updated: 2026-10-28
 
-This version uses exact picture tiles in the compact popup. It reserves no extra
+This version uses tightly cropped, rounded picture tiles in the compact popup.
+White gutters and corner backgrounds are excluded. It reserves no extra
 keyboard height and does not resize the editor when it appears.
 
 Original image
@@ -11,11 +12,13 @@ The supplied 1280 x 437 JPEG is bundled unchanged at:
 Size: 102007 bytes
 SHA-256: ee5e7d14dc8f60756db1d0c2b4c01c10379b990270447b133017d7269b0bc9db
 
-The app keeps one unscaled bitmap in memory and draws rectangular source crops
-from it. All 26 crop boundaries fall in the original white gutters. Every tile
-retains its printed key letter, region number, root shapes, colors and rounded
-border. There is no font-based root drawing, recoloring, glyph masking or image
-regeneration. Changing app fonts cannot reflow the pictured root groups.
+The app keeps one unscaled bitmap in memory. All 26 source rectangles are
+individually measured inside the pictured borders, excluding white gutters
+and JPEG edge fringe. An anti-aliased BitmapShader draws each crop as a rounded
+rectangle with the corner radius scaled from the source image. The selected
+tile highlight follows the same rounded edge. Letters, numbers, roots and
+colors remain the original image pixels. There is no font-based root drawing,
+recoloring or image regeneration. Changing fonts cannot reflow the root groups.
 
 Behavior
 
@@ -47,7 +50,7 @@ menus, keyboard dismissal, rotation and scheme changes clear the current hint.
 Update your Windows project
 
 1. Keep a copy of your existing project and signing key.
-2. Extract fcitx5-android-project-update-wubi06-image-popup.zip into the project
+2. Extract fcitx5-android-project-update-wubi06-rounded-popup.zip into the project
    root beside gradlew.bat, allowing the included source files to be replaced.
    This is an Android Studio project update.
 3. Rebuild the MAIN APP with your working toolchain:
@@ -61,17 +64,19 @@ The Rime plugin does not need rebuilding. Your working Enter, half-width and
 反拆 configuration remains usable; no Rime backup restore is needed.
 
 The project update is cumulative from the font-choice base cc8af1de and can
-also be extracted over the chart update a8eb0434 or text-popup update 08ad1055.
-The complete branch is feature/font-choice-wubi-image-popup in the optional
+also be extracted over the chart update a8eb0434, text-popup update 08ad1055
+or initial image-popup update 74927f9f.
+The complete branch is feature/font-choice-wubi-rounded-popup in the optional
 Git bundle.
 
 Validation
 
 Kotlin/Java compilation and Android resource processing passed. All 38 targeted
 JVM tests passed, including the original image hash/dimensions, all 26 source
-rectangles, complete tile containment, QWERTY neighbors, schema recognition,
+rectangles, retained label/root content, QWERTY neighbors, schema recognition,
 stale releases, fractional-density positioning and font regressions. Read-only
-pixel inspection confirms every crop boundary stays in the white gutter.
+pixel inspection checks the rounded crop perimeter for white gutters and
+confirms that the printed labels and roots remain inside each crop.
 Android device visual/gesture testing and native APK assembly/signing remain
 for your Windows setup.
 

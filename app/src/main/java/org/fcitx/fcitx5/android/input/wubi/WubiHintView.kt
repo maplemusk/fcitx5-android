@@ -11,10 +11,13 @@ import android.content.res.Configuration
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.BitmapShader
 import android.graphics.Canvas
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.Shader
 import android.view.View
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
@@ -34,8 +37,14 @@ class WubiHintView(context: Context, private val theme: Theme) : View(context) {
     private data class PendingHint(val selection: WubiHintSelection, val keyboardBounds: Rect)
 
     private val chartBitmap: Bitmap? = ChartBitmapCache.get(resources)
-    private val imagePaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
-    private val sourceRect = Rect()
+    private val imageShader = chartBitmap?.let {
+        BitmapShader(it, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+    }
+    private val imagePaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG).apply {
+        shader = imageShader
+    }
+    private val imageMatrix = Matrix()
+    private val sourceRect = RectF()
     private var selection: WubiHintSelection? = null
     private var pendingHint: PendingHint? = null
     private val card = RectF()
@@ -53,7 +62,7 @@ class WubiHintView(context: Context, private val theme: Theme) : View(context) {
         setStroke(dp(1f), ColorUtils.setAlphaComponent(theme.popupTextColor, 32))
     }
     private val centerShape = MaterialShapeDrawable(
-        ShapeAppearanceModel.builder().setAllCornerSizes(dp(24f)).build()
+        ShapeAppearanceModel.builder().setAllCornerSizes(dp(8f)).build()
     ).apply {
         fillColor = ColorStateList.valueOf(ColorUtils.setAlphaComponent(theme.accentKeyBackgroundColor, 36))
         setStroke(dp(1f), ColorUtils.setAlphaComponent(theme.accentKeyBackgroundColor, 72))
@@ -156,6 +165,9 @@ class WubiHintView(context: Context, private val theme: Theme) : View(context) {
         fitImage(selection.center.image, centerSlot, dp(84f), centerTile)
         centerPanel.set(centerTile)
         centerPanel.inset(-dp(3f), -dp(3f))
+        centerShape.shapeAppearanceModel = ShapeAppearanceModel.builder()
+            .setAllCornerSizes(imageCornerRadius(selection.center.image, centerTile) + dp(3f))
+            .build()
         val leftSlot = RectF(card.left + dp(8f), card.top + dp(8f),
             centerSlot.left - dp(6f), card.bottom - dp(8f))
         val rightSlot = RectF(centerSlot.right + dp(6f), card.top + dp(8f),
@@ -182,23 +194,31 @@ class WubiHintView(context: Context, private val theme: Theme) : View(context) {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val current = selection ?: return
-        val bitmap = chartBitmap ?: return
+        if (imageShader == null) return
         outerShape.setBounds(card.left.roundToInt(), card.top.roundToInt(),
             card.right.roundToInt(), card.bottom.roundToInt())
         outerShape.draw(canvas)
         centerShape.setBounds(centerPanel.left.roundToInt(), centerPanel.top.roundToInt(),
             centerPanel.right.roundToInt(), centerPanel.bottom.roundToInt())
         centerShape.draw(canvas)
-        current.left?.let { drawImage(canvas, bitmap, it.image, leftTile) }
-        drawImage(canvas, bitmap, current.center.image, centerTile)
-        current.right?.let { drawImage(canvas, bitmap, it.image, rightTile) }
+        current.left?.let { drawImage(canvas, it.image, leftTile) }
+        drawImage(canvas, current.center.image, centerTile)
+        current.right?.let { drawImage(canvas, it.image, rightTile) }
     }
 
-    private fun drawImage(canvas: Canvas, bitmap: Bitmap, image: WubiImageRect, destination: RectF) {
-        sourceRect.set(image.left, image.top, image.right, image.bottom)
-        // No color filter, masks or text overlays: draw the original chart pixels as supplied.
-        canvas.drawBitmap(bitmap, sourceRect, destination, imagePaint)
+    private fun drawImage(canvas: Canvas, image: WubiImageRect, destination: RectF) {
+        val shader = imageShader ?: return
+        sourceRect.set(image.left.toFloat(), image.top.toFloat(), image.right.toFloat(), image.bottom.toFloat())
+        imageMatrix.setRectToRect(sourceRect, destination, Matrix.ScaleToFit.FILL)
+        shader.setLocalMatrix(imageMatrix)
+        // An anti-aliased shape follows the pictured border, excluding the white corner gutters.
+        // The shader samples the original JPEG directly; roots are never redrawn or recolored.
+        val radius = imageCornerRadius(image, destination)
+        canvas.drawRoundRect(destination, radius, radius, imagePaint)
     }
+
+    private fun imageCornerRadius(image: WubiImageRect, destination: RectF): Float =
+        Wubi06Chart.TILE_CORNER_RADIUS * destination.width() / image.width
 
     override fun onDetachedFromWindow() {
         hideHint()
