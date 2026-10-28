@@ -87,6 +87,10 @@ open class CustomGestureView(ctx: Context) : FrameLayout(ctx) {
     var onRepeatListener: ((View) -> Unit)? = null
     var onGestureListener: OnGestureListener? = null
 
+    /** Observation only: independent of gesture consumption and key-preview preferences. */
+    var onPressStateChanged: ((KeyPressEvent.Phase) -> Unit)? = null
+    private var observedPress = false
+
     var soundEffect: InputFeedbacks.SoundEffect = InputFeedbacks.SoundEffect.Standard
 
     private val touchSlop: Float = ViewConfiguration.get(ctx).scaledTouchSlop.toFloat()
@@ -100,8 +104,22 @@ open class CustomGestureView(ctx: Context) : FrameLayout(ctx) {
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)
         if (!enabled) {
+            cancelObservedPress()
             isPressed = false
         }
+    }
+
+    private fun finishObservedPress(phase: KeyPressEvent.Phase) {
+        if (!observedPress) return
+        observedPress = false
+        onPressStateChanged?.invoke(phase)
+    }
+
+    fun cancelObservedPress() = finishObservedPress(KeyPressEvent.Phase.Cancel)
+
+    override fun onDetachedFromWindow() {
+        cancelObservedPress()
+        super.onDetachedFromWindow()
     }
 
     private fun pointInView(x: Float, y: Float): Boolean {
@@ -137,6 +155,7 @@ open class CustomGestureView(ctx: Context) : FrameLayout(ctx) {
     }
 
     fun cancelGestures() {
+        cancelObservedPress()
         isPressed = false
         resetState()
         // reset double tap state on cancel
@@ -153,6 +172,9 @@ open class CustomGestureView(ctx: Context) : FrameLayout(ctx) {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 if (!isEnabled) return false
+                cancelObservedPress()
+                observedPress = true
+                onPressStateChanged?.invoke(KeyPressEvent.Phase.Down)
                 drawableHotspotChanged(x, y)
                 isPressed = true
                 InputFeedbacks.hapticFeedback(this)
@@ -165,6 +187,9 @@ open class CustomGestureView(ctx: Context) : FrameLayout(ctx) {
                         if (longPressFeedbackEnabled) {
                             InputFeedbacks.hapticFeedback(this@CustomGestureView, true)
                         }
+                        // Alternative-key popups keep their original gestures and
+                        // should not compete with passive pressed-key feedback.
+                        cancelObservedPress()
                         longPressTriggered = performLongClick()
                     }
                 }
@@ -188,6 +213,7 @@ open class CustomGestureView(ctx: Context) : FrameLayout(ctx) {
                 }
             }
             MotionEvent.ACTION_UP -> {
+                finishObservedPress(KeyPressEvent.Phase.Release)
                 isPressed = false
                 InputFeedbacks.hapticFeedback(this, longPress = true, keyUp = true)
                 dispatchGestureEvent(GestureType.Up, event.x, event.y)
@@ -218,6 +244,7 @@ open class CustomGestureView(ctx: Context) : FrameLayout(ctx) {
                 if (!isEnabled) return false
                 drawableHotspotChanged(x, y)
                 if (!touchMovedOutside && !pointInView(x, y)) {
+                    cancelObservedPress()
                     touchMovedOutside = true
                     if (longPressEnabled) {
                         longPressJob?.cancel()
@@ -240,6 +267,7 @@ open class CustomGestureView(ctx: Context) : FrameLayout(ctx) {
                 return true
             }
             MotionEvent.ACTION_CANCEL -> {
+                cancelObservedPress()
                 dispatchGestureEvent(GestureType.Up, event.x, event.y)
                 cancelGestures()
                 return true

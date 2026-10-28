@@ -179,6 +179,12 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
             switch(R.string.space_swipe_move_cursor, "space_swipe_move_cursor", true)
         val showLangSwitchKey =
             switch(R.string.show_lang_switch_key, "show_lang_switch_key", true)
+        val showWubi06Hints = switch(
+            R.string.wubi_hint_setting,
+            "show_wubi06_hints",
+            true,
+            R.string.wubi_hint_setting_summary
+        )
         val langSwitchKeyBehavior = enumList(
             R.string.lang_switch_key_behavior,
             "lang_switch_key_behavior",

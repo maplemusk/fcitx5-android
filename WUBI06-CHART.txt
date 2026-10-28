@@ -1,0 +1,4 @@
+Wubi06 hint documentation
+
+The current implementation uses a compact pressed-key popup.
+See WUBI06-POPUP.txt for behavior, build instructions and validation.

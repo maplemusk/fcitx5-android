@@ -11,6 +11,7 @@ import org.fcitx.fcitx5.android.core.FcitxEvent.CandidateListEvent
 import org.fcitx.fcitx5.android.core.FcitxEvent.InputPanelEvent
 import org.fcitx.fcitx5.android.core.FormattedText
 import org.fcitx.fcitx5.android.core.InputMethodEntry
+import org.fcitx.fcitx5.android.input.keyboard.KeyPressEvent
 import org.fcitx.fcitx5.android.input.wm.InputWindow
 import org.mechdancer.dependency.Dependent
 import org.mechdancer.dependency.DynamicScope
@@ -52,6 +53,10 @@ class InputBroadcaster : UniqueComponent<InputBroadcaster>(), Dependent, InputBr
 
     override fun onImeUpdate(ime: InputMethodEntry) {
         receivers.forEach { it.onImeUpdate(ime) }
+    }
+
+    override fun onKeyPress(event: KeyPressEvent) {
+        receivers.forEach { it.onKeyPress(event) }
     }
 
     override fun onCandidateUpdate(data: CandidateListEvent.Data) {

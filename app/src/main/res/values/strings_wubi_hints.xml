@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wubi_hint_setting">Show Wubi06 key hints</string>
+    <string name="wubi_hint_setting_summary">Briefly show original chart tiles for the pressed key and its QWERTY neighbors above the keyboard.</string>
+    <string name="wubi_hint_popup_key">%1$s</string>
+</resources>

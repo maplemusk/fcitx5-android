@@ -1,0 +1,79 @@
+Wubi06 pressed-key image hints for Fcitx5 Android
+Updated: 2026-10-28
+
+This version uses exact picture tiles in the compact popup. It reserves no extra
+keyboard height and does not resize the editor when it appears.
+
+Original image
+
+The supplied 1280 x 437 JPEG is bundled unchanged at:
+  app/src/main/res/drawable-nodpi/wubi06_root_chart.jpg
+Size: 102007 bytes
+SHA-256: ee5e7d14dc8f60756db1d0c2b4c01c10379b990270447b133017d7269b0bc9db
+
+The app keeps one unscaled bitmap in memory and draws rectangular source crops
+from it. All 26 crop boundaries fall in the original white gutters. Every tile
+retains its printed key letter, region number, root shapes, colors and rounded
+border. There is no font-based root drawing, recoloring, glyph masking or image
+regeneration. Changing app fonts cannot reflow the pictured root groups.
+
+Behavior
+
+- Press a letter on the normal keyboard: its complete pictured tile appears
+  larger in the center, with smaller complete QWERTY-neighbor tiles beside it.
+  For S, the tiles are A / S / D, cut directly from your picture.
+- Neighbors stay in the same keyboard row. Q has no left neighbor; P has no
+  right neighbor. Z uses the original pictured learning-key tile.
+- The hint stays during a normal press, remains for about 850 ms after release,
+  then fades over 120 ms. New key presses replace it immediately.
+- The frame uses Material 3 rounded tonal surfaces and translucency. The chart
+  tiles keep their original colored backgrounds and lettering.
+- The overlay takes no focus or touches. Existing key actions and gestures are
+  observed rather than replaced. The normal letter-preview setting is separate.
+- Settings > Virtual keyboard > Show Wubi06 key hints controls the feature.
+
+Layout and visibility
+
+The card is at most 96dp high and 252dp wide, just above the keyboard with room
+for the preedit line. Each image is uniformly fitted to its slot, preserving
+its source aspect ratio. Missing neighbors leave blank slots. The pressed tile
+is about 84dp high; neighbors are about 64dp high when space permits.
+
+The app uses deployed Wubi06 metadata to recognize renamed schemes such as
+新世纪五笔 [Enter fix]. It hides hints for other input methods, English mode,
+password fields and other keyboard panels. Cancellation, symbol long-press
+menus, keyboard dismissal, rotation and scheme changes clear the current hint.
+
+Update your Windows project
+
+1. Keep a copy of your existing project and signing key.
+2. Extract fcitx5-android-project-update-wubi06-image-popup.zip into the project
+   root beside gradlew.bat, allowing the included source files to be replaced.
+   This is an Android Studio project update.
+3. Rebuild the MAIN APP with your working toolchain:
+     .\gradlew.bat :app:assembleRelease
+   Use your existing release signing configuration or Android Studio's Generate
+   Signed App Bundle or APK workflow, selecting the SAME keystore and alias as
+   your installed main app.
+4. Install the signed APK of the same architecture. Activate Wubi06 and press S.
+
+The Rime plugin does not need rebuilding. Your working Enter, half-width and
+反拆 configuration remains usable; no Rime backup restore is needed.
+
+The project update is cumulative from the font-choice base cc8af1de and can
+also be extracted over the chart update a8eb0434 or text-popup update 08ad1055.
+The complete branch is feature/font-choice-wubi-image-popup in the optional
+Git bundle.
+
+Validation
+
+Kotlin/Java compilation and Android resource processing passed. All 38 targeted
+JVM tests passed, including the original image hash/dimensions, all 26 source
+rectangles, complete tile containment, QWERTY neighbors, schema recognition,
+stale releases, fractional-density positioning and font regressions. Read-only
+pixel inspection confirms every crop boundary stays in the white gutter.
+Android device visual/gesture testing and native APK assembly/signing remain
+for your Windows setup.
+
+An optional offline HTML preview uses the very same JPEG and source rectangles.
+It is a browser layout demonstration, not a running Android screenshot.

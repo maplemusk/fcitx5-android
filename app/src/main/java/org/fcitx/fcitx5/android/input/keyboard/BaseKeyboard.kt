@@ -48,6 +48,7 @@ abstract class BaseKeyboard(
 ) : ConstraintLayout(context) {
 
     var keyActionListener: KeyActionListener? = null
+    var keyPressListener: ((KeyPressEvent) -> Unit)? = null
 
     private val prefs = AppPrefs.getInstance()
 
@@ -144,6 +145,18 @@ abstract class BaseKeyboard(
             is KeyDef.Appearance.Text -> TextKeyView(context, theme, def.appearance)
             is KeyDef.Appearance.Image -> ImageKeyView(context, theme, def.appearance)
         }.apply {
+            val letter = (def as? AlphabetKey)?.character?.singleOrNull()
+                ?.uppercaseChar()?.takeIf { it in 'A'..'Z' }
+            var pressToken: Long? = null
+            onPressStateChanged = press@{ phase ->
+                val token = if (phase == KeyPressEvent.Phase.Down) {
+                    KeyPressEvent.nextToken().also { pressToken = it }
+                } else {
+                    pressToken ?: return@press
+                }
+                if (phase != KeyPressEvent.Phase.Down) pressToken = null
+                keyPressListener?.invoke(KeyPressEvent(token, phase, letter))
+            }
             soundEffect = when (def) {
                 is SpaceKey -> InputFeedbacks.SoundEffect.SpaceBar
                 is MiniSpaceKey -> InputFeedbacks.SoundEffect.SpaceBar
@@ -501,6 +514,9 @@ abstract class BaseKeyboard(
     }
 
     open fun onDetach() {
+        keyRows.forEach { row ->
+            row.children.filterIsInstance<KeyView>().forEach { it.cancelObservedPress() }
+        }
         releaseAllTouchTargets()
     }
 

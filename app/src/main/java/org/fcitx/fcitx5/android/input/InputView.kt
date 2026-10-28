@@ -8,15 +8,19 @@ package org.fcitx.fcitx5.android.input
 import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.graphics.Point
+import android.graphics.Rect
 import android.os.Build
 import android.view.View
 import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InlineSuggestionsResponse
 import android.widget.ImageView
+import android.widget.FrameLayout
 import androidx.annotation.Keep
 import androidx.annotation.RequiresApi
 import androidx.core.view.updateLayoutParams
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.fcitx.fcitx5.android.core.CapabilityFlags
 import org.fcitx.fcitx5.android.core.FcitxEvent
 import org.fcitx.fcitx5.android.daemon.FcitxConnection
@@ -41,6 +45,8 @@ import org.fcitx.fcitx5.android.input.picker.symbolPicker
 import org.fcitx.fcitx5.android.input.popup.PopupComponent
 import org.fcitx.fcitx5.android.input.preedit.PreeditComponent
 import org.fcitx.fcitx5.android.input.wm.InputWindowManager
+import org.fcitx.fcitx5.android.input.wubi.Wubi06SchemaResolver
+import org.fcitx.fcitx5.android.input.wubi.WubiHintComponent
 import org.fcitx.fcitx5.android.utils.unset
 import org.fcitx.fcitx5.android.utils.windowManager
 import org.mechdancer.dependency.DynamicScope
@@ -106,6 +112,16 @@ class InputView(
     private val windowManager = InputWindowManager()
     private val kawaiiBar = KawaiiBarComponent()
     private val horizontalCandidate = HorizontalCandidateComponent()
+    private val wubiSchemaResolver = context.getExternalFilesDir(null)
+        ?.resolve("data/rime/build")?.let(::Wubi06SchemaResolver)
+    private val wubiHint = WubiHintComponent(
+        matchesWubi06 = { ime ->
+            ime.uniqueName == "rime" && withContext(Dispatchers.IO) {
+                wubiSchemaResolver?.matches(ime.subMode.name) == true
+            }
+        },
+        keyboardBounds = ::keyboardBoundsForHints
+    )
     private val keyboardWindow = KeyboardWindow()
     private val symbolPicker = symbolPicker()
     private val emojiPicker = emojiPicker()
@@ -127,6 +143,7 @@ class InputView(
         scope += windowManager
         scope += kawaiiBar
         scope += horizontalCandidate
+        scope += wubiHint
         broadcaster.onScopeSetupFinished(scope)
     }
 
@@ -271,6 +288,11 @@ class InputView(
             centerHorizontally()
             bottomOfParent()
         })
+        // The hint is painted in the existing full-screen popup layer. It adds
+        // no keyboard height, editor inset, touch target, or additional window.
+        popup.root.addView(wubiHint.view, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
+        ))
         add(popup.root, lParams(matchParent, matchParent) {
             centerVertically()
             centerHorizontally()
@@ -318,6 +340,14 @@ class InputView(
         kawaiiBar.view.setPadding(sidePadding, 0, sidePadding, 0)
     }
 
+    private fun keyboardBoundsForHints(): Rect? {
+        if (!keyboardView.isLaidOut || !keyboardView.isShown) return null
+        val location = IntArray(2)
+        keyboardView.getLocationInWindow(location)
+        return Rect(location[0], location[1], location[0] + keyboardView.width,
+            location[1] + keyboardView.height)
+    }
+
     override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
         bottomPaddingSpace.updateLayoutParams<LayoutParams> {
             bottomMargin = getNavBarBottomInset(insets)
@@ -334,6 +364,11 @@ class InputView(
         if (focusChangeResetKeyboard || !restarting) {
             windowManager.attachWindow(KeyboardWindow)
         }
+    }
+
+    fun finishInput() {
+        // The IME can be hidden without detaching its cached InputView.
+        wubiHint.finishInput()
     }
 
     override fun onStartHandleFcitxEvent() {
@@ -367,6 +402,10 @@ class InputView(
             }
             is FcitxEvent.StatusAreaEvent -> {
                 punctuation.updatePunctuationMapping(it.data.actions)
+                // Rime schema/ASCII changes can update the sub-mode without an
+                // input-method change event. The schema name is matched against
+                // the deployed Wubi06 metadata off the UI thread.
+                wubiHint.onImeUpdate(it.data.im)
                 broadcaster.onStatusAreaUpdate(it.data.actions)
             }
             else -> {}
@@ -383,6 +422,7 @@ class InputView(
     }
 
     override fun onDetachedFromWindow() {
+        wubiHint.dispose()
         advancedPrefs.unregisterOnChangeListener(onKeyboardSizeChangeListener)
         keyboardPrefs.unregisterOnChangeListener(onKeyboardSizeChangeListener)
         // clear DynamicScope, implies that InputView should not be attached again after detached.
