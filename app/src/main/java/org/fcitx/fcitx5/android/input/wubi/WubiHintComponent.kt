@@ -34,14 +34,14 @@ import org.mechdancer.dependency.manager.ManagedHandler
 import org.mechdancer.dependency.manager.managedHandler
 
 class WubiHintComponent(
-    private val matchesWubi06: suspend (InputMethodEntry) -> Boolean,
+    private val resolveVariant: suspend (InputMethodEntry) -> WubiVariant?,
     private val keyboardBounds: () -> Rect?
 ) : UniqueComponent<WubiHintComponent>(), Dependent, InputBroadcastReceiver,
     ManagedHandler by managedHandler() {
 
     private val context by manager.context()
     private val theme by manager.theme()
-    private val enabledPreference = AppPrefs.getInstance().keyboard.showWubi06Hints
+    private val enabledPreference = AppPrefs.getInstance().keyboard.showWubiHints
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val pressState = WubiHintPressState()
 
@@ -49,7 +49,7 @@ class WubiHintComponent(
     private var lookupJob: Job? = null
     private var lingerJob: Job? = null
     private var lookupGeneration = 0
-    private var isWubi06 = false
+    private var variant: WubiVariant? = null
     private var keyboardAttached = false
     // Wait for the editor's capabilities before showing a newly created hint.
     private var password = true
@@ -149,36 +149,40 @@ class WubiHintComponent(
         val generation = ++lookupGeneration
         lookupJob?.cancel()
         lookupJob = null
-        if (changed) dismiss()
+        // Hide the previous chart before an asynchronous lookup, including after deploy.
+        // A key pressed while the lookup runs may then show only the resolved variant.
+        dismiss()
+        variant = null
         if (!WubiHintVisibility.canResolve(ime.uniqueName, ime.subMode.icon)) {
-            isWubi06 = false
-            dismiss()
             return
         }
-        isWubi06 = false
         lookupJob = scope.launch {
             // The supplied resolver reads metadata off the UI thread. Fcitx
             // exposes the schema's display caption here, not its native ID.
-            val matches = runCatching { matchesWubi06(ime) }.getOrElse {
+            val resolved = runCatching { resolveVariant(ime) }.getOrElse {
                 if (it is CancellationException) throw it
-                false
+                null
             }
             if (!disposed && generation == lookupGeneration) {
-                isWubi06 = matches
-                if (matches) renderCurrentHint() else dismiss()
+                variant = resolved
+                if (resolved != null) renderCurrentHint() else dismiss()
             }
         }
     }
 
     private fun canShow() = !disposed && WubiHintVisibility.shouldShow(
         enabled = enabledPreference.getValue(),
-        isWubi06 = isWubi06,
+        isWubi = variant != null,
         keyboardAttached = keyboardAttached,
         password = password
     )
 
     private fun renderCurrentHint() {
-        val selection = pressState.current?.letter?.let { WubiHintSelection.forKey(it) }
+        val selection = variant?.let { currentVariant ->
+            pressState.current?.letter?.let {
+                WubiHintSelection.forKey(it, WubiCharts.forVariant(currentVariant))
+            }
+        }
         val bounds = if (canShow() && selection != null) keyboardBounds() else null
         if (bounds != null && !bounds.isEmpty && selection != null) {
             view.showHint(selection, Rect(bounds))
@@ -204,6 +208,7 @@ class WubiHintComponent(
         dismiss()
         scope.cancel()
         activeIme = null
+        variant = null
         if (listenerRegistered) {
             enabledPreference.unregisterOnChangeListener(enabledListener)
             listenerRegistered = false

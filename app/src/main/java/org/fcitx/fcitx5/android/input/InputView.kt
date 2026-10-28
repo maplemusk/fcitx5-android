@@ -45,7 +45,7 @@ import org.fcitx.fcitx5.android.input.picker.symbolPicker
 import org.fcitx.fcitx5.android.input.popup.PopupComponent
 import org.fcitx.fcitx5.android.input.preedit.PreeditComponent
 import org.fcitx.fcitx5.android.input.wm.InputWindowManager
-import org.fcitx.fcitx5.android.input.wubi.Wubi06SchemaResolver
+import org.fcitx.fcitx5.android.input.wubi.WubiSchemaResolver
 import org.fcitx.fcitx5.android.input.wubi.WubiHintComponent
 import org.fcitx.fcitx5.android.utils.unset
 import org.fcitx.fcitx5.android.utils.windowManager
@@ -113,12 +113,12 @@ class InputView(
     private val kawaiiBar = KawaiiBarComponent()
     private val horizontalCandidate = HorizontalCandidateComponent()
     private val wubiSchemaResolver = context.getExternalFilesDir(null)
-        ?.resolve("data/rime/build")?.let(::Wubi06SchemaResolver)
+        ?.resolve("data/rime/build")?.let(::WubiSchemaResolver)
     private val wubiHint = WubiHintComponent(
-        matchesWubi06 = { ime ->
-            ime.uniqueName == "rime" && withContext(Dispatchers.IO) {
-                wubiSchemaResolver?.matches(ime.subMode.name) == true
-            }
+        resolveVariant = { ime ->
+            if (ime.uniqueName == "rime") withContext(Dispatchers.IO) {
+                wubiSchemaResolver?.resolve(ime.subMode.name)
+            } else null
         },
         keyboardBounds = ::keyboardBoundsForHints
     )
@@ -404,7 +404,7 @@ class InputView(
                 punctuation.updatePunctuationMapping(it.data.actions)
                 // Rime schema/ASCII changes can update the sub-mode without an
                 // input-method change event. The schema name is matched against
-                // the deployed Wubi06 metadata off the UI thread.
+                // the deployed Wubi metadata off the UI thread.
                 wubiHint.onImeUpdate(it.data.im)
                 broadcaster.onStatusAreaUpdate(it.data.actions)
             }

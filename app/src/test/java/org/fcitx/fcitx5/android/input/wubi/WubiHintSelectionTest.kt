@@ -17,9 +17,9 @@ class WubiHintSelectionTest {
     fun `S shows physical neighbors A and D rather than code continuations`() {
         val selection = WubiHintSelection.forKey('S')
         assertEquals(listOf('A', 'S', 'D'), letters(selection))
-        assertEquals(WubiImageRect(75, 151, 196, 286), selection?.left?.image)
-        assertEquals(WubiImageRect(201, 151, 322, 286), selection?.center?.image)
-        assertEquals(WubiImageRect(327, 151, 449, 286), selection?.right?.image)
+        assertEquals(WubiImageRect(150, 302, 392, 572), selection?.left?.image)
+        assertEquals(WubiImageRect(402, 302, 644, 572), selection?.center?.image)
+        assertEquals(WubiImageRect(654, 302, 898, 572), selection?.right?.image)
     }
 
     @Test
@@ -43,7 +43,7 @@ class WubiHintSelectionTest {
             val selected = WubiHintSelection.forKey(letter)
             assertNotNull("Missing physical key $letter", selected)
             assertEquals(selected, WubiHintSelection.forKey(letter.lowercaseChar()))
-            assertEquals(Wubi06Chart.rows.flatten().single { it.key == letter }, selected?.center)
+            assertEquals(WubiCharts.forVariant(WubiVariant.Wubi06).rows.flatten().single { it.key == letter }, selected?.center)
             selected!!.center.key
         }
         assertEquals(26, centers.toSet().size)
@@ -53,7 +53,7 @@ class WubiHintSelectionTest {
     fun `Z selects its original image tile rather than a made up text label`() {
         val selected = WubiHintSelection.forKey('z')!!
         assertEquals('Z', selected.center.key)
-        assertEquals(WubiImageRect(138, 290, 259, 425), selected.center.image)
+        assertEquals(WubiImageRect(276, 580, 518, 850), selected.center.image)
         assertNull(selected.left)
         assertEquals('X', selected.right?.key)
     }

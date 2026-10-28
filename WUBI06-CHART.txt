@@ -1,4 +1,6 @@
 Wubi06 hint documentation
 
+For the current 86 / 98 / 06 extension, see WUBI-MULTI-HINTS.txt.
+
 The current implementation uses a compact pressed-key popup.
 See WUBI06-POPUP.txt for behavior, build instructions and validation.

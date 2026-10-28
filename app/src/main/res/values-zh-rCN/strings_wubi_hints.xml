@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="wubi_hint_setting">显示新世纪五笔按键提示</string>
-    <string name="wubi_hint_setting_summary">按下字母键时，在键盘上方短暂显示该键及左右相邻键的原图字根。</string>
+    <string name="wubi_hint_setting">显示五笔按键提示</string>
+    <string name="wubi_hint_setting_summary">按下字母键时，按当前86、98或06方案显示该键及左右相邻键的原图字根。</string>
     <string name="wubi_hint_popup_key">%1$s</string>
 </resources>

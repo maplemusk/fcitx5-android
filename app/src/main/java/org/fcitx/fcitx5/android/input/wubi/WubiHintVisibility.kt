@@ -11,8 +11,8 @@ internal object WubiHintVisibility {
 
     fun shouldShow(
         enabled: Boolean,
-        isWubi06: Boolean,
+        isWubi: Boolean,
         keyboardAttached: Boolean,
         password: Boolean
-    ): Boolean = enabled && isWubi06 && keyboardAttached && !password
+    ): Boolean = enabled && isWubi && keyboardAttached && !password
 }

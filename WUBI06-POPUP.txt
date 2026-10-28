@@ -1,6 +1,10 @@
 Wubi06 pressed-key image hints for Fcitx5 Android
 Updated: 2026-10-28
 
+For the extension that adds matching Wubi86 and Wubi98 images, see
+WUBI-MULTI-HINTS.txt. This document describes the unchanged original06 atlas.
+The current runtime uses a 2560 x 874 PNG; the JPEG below is its archived source.
+
 This version uses tightly cropped, rounded picture tiles in the compact popup.
 White gutters and corner backgrounds are excluded. It reserves no extra
 keyboard height and does not resize the editor when it appears.

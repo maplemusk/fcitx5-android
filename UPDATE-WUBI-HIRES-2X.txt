@@ -1,0 +1,39 @@
+Fcitx5 Android high-resolution Wubi hints (2x source images)
+
+Branch: feature/wubi-hires-picture-hints
+Commit: 3865c01bcda88b66be2914b776168337c0307b7f
+Previous 86/98/06 hint version: 0e92863d5bde8c56d03cbcd839f4a2c47578146c
+Compatible font-choice/AGP9.3 base: cc8af1deb40ca7f70316bc559f1212c449ae3897
+
+All runtime charts are PNGs at 2560 x 874 (twice the original width AND height).
+06: original picture upscaled with Lanczos and conservative sharpening.
+86: high-resolution root artwork from your ForAI.zip, bottom shortcut characters
+    removed, 06-style top key/region labels and pastel frames.
+98: each supplied Light tile resized uniformly as a whole, preserving the entire
+    internal root/color/marker/bottom-label layout. Existing Z learning tile added.
+
+The original06 JPEG is still archived unchanged. The app now loads
+wubi06_root_chart_2x.png. Crop coordinates/radii are updated per chart;98 has
+its own narrower card bounds. The on-screen popup stays at its compact dp size.
+
+Windows project update:
+1. Back up your existing project; retain your release keystore/signing config.
+2. Extract this ZIP into the true project root (contains gradlew.bat and
+   settings.gradle.kts), merging folders and replacing matching source files.
+3. Rebuild the main app with the existing signing setup:
+     .\gradlew.bat :app:assembleRelease
+4. Install with the same certificate as your current custom app.
+   No Rime plugin rebuild or scheme/dictionary import is needed.
+5. Select Wubi06, Wubi86 or Wubi98 and enable Show Wubi key hints if necessary.
+
+This overlay supersedes earlier hint overlays and contains their required files
+since the font-choice/AGP9.3 base. For an independently modified project, review
+and apply the Git patch instead of overwriting your own changes.
+It contains no APK, private key, Rime dictionary, upstream Lua or font file.
+
+Verification: Kotlin/Java/resources compiled, 50 targeted
+Wubi/font tests passed. All78 app crop rectangles match the generated atlases;
+source98 complete-card pixels match their uniformly resized originals;86 root
+bodies remain from the supplied bitmap. Original06 source hash unchanged.
+The06 enlargement sharpens the available photo; it cannot recover absent detail.
+No signed APK was built here; Android-device appearance still needs your check.

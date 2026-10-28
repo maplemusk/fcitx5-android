@@ -179,8 +179,9 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
             switch(R.string.space_swipe_move_cursor, "space_swipe_move_cursor", true)
         val showLangSwitchKey =
             switch(R.string.show_lang_switch_key, "show_lang_switch_key", true)
-        val showWubi06Hints = switch(
+        val showWubiHints = switch(
             R.string.wubi_hint_setting,
+            // Preserve the stored choice from the original Wubi06-only setting.
             "show_wubi06_hints",
             true,
             R.string.wubi_hint_setting_summary

@@ -20,7 +20,7 @@ class WubiHintVisibilityTest {
     }
 
     @Test
-    fun showsForEnabledWubi06KeyboardWithoutNeedingCandidates() {
+    fun showsForEnabledWubiKeyboardWithoutNeedingCandidates() {
         assertTrue(WubiHintVisibility.shouldShow(true, true, true, false))
     }
 

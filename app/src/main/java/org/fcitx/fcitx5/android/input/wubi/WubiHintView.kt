@@ -36,12 +36,11 @@ class WubiHintView(context: Context, private val theme: Theme) : View(context) {
 
     private data class PendingHint(val selection: WubiHintSelection, val keyboardBounds: Rect)
 
-    private val chartBitmap: Bitmap? = ChartBitmapCache.get(resources)
-    private val imageShader = chartBitmap?.let {
-        BitmapShader(it, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
-    }
+    private var chart: WubiChart? = null
+    private var chartBitmap: Bitmap? = null
+    private var imageShader: BitmapShader? = null
     private val imagePaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG).apply {
-        shader = imageShader
+        shader = null
     }
     private val imageMatrix = Matrix()
     private val sourceRect = RectF()
@@ -84,7 +83,7 @@ class WubiHintView(context: Context, private val theme: Theme) : View(context) {
         animationGeneration++
         animate().cancel()
         pendingHint = null
-        if (chartBitmap == null || keyboardBounds.isEmpty || !hasValidImages(selection)) {
+        if (!bindChart(selection.chart) || keyboardBounds.isEmpty || !hasValidImages(selection)) {
             clearHint()
             return
         }
@@ -129,11 +128,30 @@ class WubiHintView(context: Context, private val theme: Theme) : View(context) {
 
     private fun hasValidImages(selection: WubiHintSelection): Boolean {
         val bitmap = chartBitmap ?: return false
+        if (selection.chart != chart) return false
         return listOfNotNull(selection.left, selection.center, selection.right).all { hint ->
             val image = hint.image
             image.left >= 0 && image.top >= 0 && image.width > 0 && image.height > 0 &&
                 image.right <= bitmap.width && image.bottom <= bitmap.height
         }
+    }
+
+    private fun bindChart(next: WubiChart): Boolean {
+        val bitmap = ChartBitmapCache.get(resources, next)
+        if (bitmap == null) {
+            chart = null
+            chartBitmap = null
+            imageShader = null
+            imagePaint.shader = null
+            return false
+        }
+        if (chart != next || chartBitmap !== bitmap) {
+            chart = next
+            chartBitmap = bitmap
+            imageShader = BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+            imagePaint.shader = imageShader
+        }
+        return true
     }
 
     private fun positionCard(keyboardBounds: Rect, selection: WubiHintSelection): Boolean {
@@ -166,7 +184,7 @@ class WubiHintView(context: Context, private val theme: Theme) : View(context) {
         centerPanel.set(centerTile)
         centerPanel.inset(-dp(3f), -dp(3f))
         centerShape.shapeAppearanceModel = ShapeAppearanceModel.builder()
-            .setAllCornerSizes(imageCornerRadius(selection.center.image, centerTile) + dp(3f))
+            .setAllCornerSizes(imageCornerRadius(selection.chart, selection.center.image, centerTile) + dp(3f))
             .build()
         val leftSlot = RectF(card.left + dp(8f), card.top + dp(8f),
             centerSlot.left - dp(6f), card.bottom - dp(8f))
@@ -194,31 +212,31 @@ class WubiHintView(context: Context, private val theme: Theme) : View(context) {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val current = selection ?: return
-        if (imageShader == null) return
+        if (imageShader == null || current.chart != chart) return
         outerShape.setBounds(card.left.roundToInt(), card.top.roundToInt(),
             card.right.roundToInt(), card.bottom.roundToInt())
         outerShape.draw(canvas)
         centerShape.setBounds(centerPanel.left.roundToInt(), centerPanel.top.roundToInt(),
             centerPanel.right.roundToInt(), centerPanel.bottom.roundToInt())
         centerShape.draw(canvas)
-        current.left?.let { drawImage(canvas, it.image, leftTile) }
-        drawImage(canvas, current.center.image, centerTile)
-        current.right?.let { drawImage(canvas, it.image, rightTile) }
+        current.left?.let { drawImage(canvas, current.chart, it.image, leftTile) }
+        drawImage(canvas, current.chart, current.center.image, centerTile)
+        current.right?.let { drawImage(canvas, current.chart, it.image, rightTile) }
     }
 
-    private fun drawImage(canvas: Canvas, image: WubiImageRect, destination: RectF) {
+    private fun drawImage(canvas: Canvas, chart: WubiChart, image: WubiImageRect, destination: RectF) {
         val shader = imageShader ?: return
         sourceRect.set(image.left.toFloat(), image.top.toFloat(), image.right.toFloat(), image.bottom.toFloat())
         imageMatrix.setRectToRect(sourceRect, destination, Matrix.ScaleToFit.FILL)
         shader.setLocalMatrix(imageMatrix)
         // An anti-aliased shape follows the pictured border, excluding the white corner gutters.
-        // The shader samples the original JPEG directly; roots are never redrawn or recolored.
-        val radius = imageCornerRadius(image, destination)
+        // The shader samples the selected variant's image directly, without text layout.
+        val radius = imageCornerRadius(chart, image, destination)
         canvas.drawRoundRect(destination, radius, radius, imagePaint)
     }
 
-    private fun imageCornerRadius(image: WubiImageRect, destination: RectF): Float =
-        Wubi06Chart.TILE_CORNER_RADIUS * destination.width() / image.width
+    private fun imageCornerRadius(chart: WubiChart, image: WubiImageRect, destination: RectF): Float =
+        chart.tileCornerRadius * destination.width() / image.width
 
     override fun onDetachedFromWindow() {
         hideHint()
@@ -248,33 +266,38 @@ class WubiHintView(context: Context, private val theme: Theme) : View(context) {
 
     private fun dp(value: Float): Float = value * resources.displayMetrics.density
 
-    /** One shared, unscaled decode across input-view recreations; never decoded while drawing. */
+    /** One unscaled decode per variant across view recreations; never decode while drawing. */
     private object ChartBitmapCache {
-        @Volatile private var attempted = false
-        private var bitmap: Bitmap? = null
+        private val bitmaps = mutableMapOf<WubiVariant, Bitmap?>()
 
-        fun get(resources: Resources): Bitmap? {
-            if (!attempted) synchronized(this) {
-                if (!attempted) {
-                    val candidate = runCatching {
-                        BitmapFactory.decodeResource(resources, R.drawable.wubi06_root_chart,
-                            BitmapFactory.Options().apply {
-                                inScaled = false
-                                inDensity = 0
-                                inTargetDensity = 0
-                                inPreferredConfig = Bitmap.Config.ARGB_8888
-                            })
-                    }.getOrNull()
-                    if (candidate != null && candidate.width == Wubi06Chart.IMAGE_WIDTH &&
-                        candidate.height == Wubi06Chart.IMAGE_HEIGHT) {
-                        bitmap = candidate
-                    } else {
-                        candidate?.recycle()
-                    }
-                    attempted = true
+        @Synchronized
+        fun get(resources: Resources, chart: WubiChart): Bitmap? {
+            if (!bitmaps.containsKey(chart.variant)) {
+                val resource = when (chart.variant) {
+                    WubiVariant.Wubi06 -> R.drawable.wubi06_root_chart_2x
+                    WubiVariant.Wubi86 -> R.drawable.wubi86_root_chart
+                    WubiVariant.Wubi98 -> R.drawable.wubi98_root_chart
+                }
+                val candidate = runCatching {
+                    BitmapFactory.decodeResource(resources, resource,
+                        BitmapFactory.Options().apply {
+                            inScaled = false
+                            inDensity = 0
+                            inTargetDensity = 0
+                            inPreferredConfig = Bitmap.Config.ARGB_8888
+                        })
+                }.getOrNull()
+                bitmaps[chart.variant] = if (candidate != null &&
+                    candidate.width == chart.imageWidth && candidate.height == chart.imageHeight) {
+                    candidate
+                } else {
+                    candidate?.recycle()
+                    null
                 }
             }
-            return bitmap
+            return bitmaps[chart.variant]?.takeIf {
+                it.width == chart.imageWidth && it.height == chart.imageHeight
+            }
         }
     }
 }

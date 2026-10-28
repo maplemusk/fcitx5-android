@@ -1,0 +1,58 @@
+Wubi86 / Wubi98 / Wubi06 picture hints
+
+The keyboard's compact root hint now follows the selected Rime schema:
+  wubi06 -> New Century Wubi06 picture
+  wubi86 -> Wubi86 picture
+  wubi98 -> Wubi98 picture
+
+Use the existing three-version or Wubi + Rime Ice configuration kit. Deploy
+the Rime configuration, restart Fcitx, then choose a Wubi scheme from the
+native Rime scheme menu. The existing schema names and IDs remain unchanged.
+
+Settings > Virtual Keyboard > Show Wubi key hints controls all three schemes.
+The previously saved Wubi06 setting is reused, so the existing choice survives
+this upgrade. The switch is enabled by default.
+
+The popup shows the pressed letter and its physical same-row QWERTY neighbors.
+It keeps the existing compact size, rounded image crops, translucent Material
+frame and short linger. It does not add keyboard height. Password and ASCII
+input, non-letter keys and non-Wubi schemes do not show radical hints.
+
+All three runtime charts are 2560 x 874 PNG images. Wubi06 is enlarged to twice
+the original width and height, with its crop coordinates and source corner
+radius scaled by two. The original 1280 x 437 JPEG remains as the archived
+source; the keyboard loads wubi06_root_chart_2x.png instead.
+
+The popup's displayed dp size stays compact. Only source image pixels and crop
+coordinates use the higher resolution. Wubi86 and Wubi98 retain their own crop
+descriptors so each supplied picture's tile layout is sampled correctly.
+
+The app renders bitmap crops, so imported font selection cannot reflow or
+replace these hint glyphs. The candidate-decomposition font remains a separate
+setting. Wubi98 keeps the supplied picture's in-tile root and label arrangement.
+
+The current 86 and 98 artwork comes from the user's ForAI.zip references:
+- Wubi86 uses the high-resolution radical artwork, removes the bottom-left
+  single-character shortcuts and places letters/region numbers at the top,
+  following the 06 tile style.
+- Wubi98 keeps each of the 25 supplied cards intact, including the bottom label
+  positions, colored radicals and circle markers. Cards are scaled uniformly
+  into the atlas. A neutral Z learning tile supplies the remaining QWERTY key.
+
+Wubi06 is a high-quality enlargement and sharpening of the original picture;
+the extra pixels do not invent glyph details absent from the source JPEG.
+The supplied artwork retains its original rights. Attribution and the earlier
+WubiMaster semantic-reference license are in app/src/main/assets/wubi-hints/.
+
+This is a main-app update. Rebuild and sign the main APK using your existing
+release keystore. No Rime plugin rebuild, schema rename, dictionary replacement
+or starter-kit update is required.
+
+Existing Windows project:
+  Apply the source update to the project with the working rounded Wubi06 popup.
+  In that project run:
+    .\gradlew.bat :app:assembleRelease
+  Use the same signing configuration/certificate as your installed custom app.
+
+Validation results and exact source revision are provided with the delivery.
+Actual Android device appearance must be checked after installing the rebuilt app.

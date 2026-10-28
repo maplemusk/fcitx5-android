@@ -1,0 +1,30 @@
+Wubi high-resolution key-hint chart sources
+
+All runtime atlases are 2560 x 874 pixels. The original Wubi06 photograph,
+wubi06_root_chart.jpg, is retained unchanged as the source. The runtime
+wubi06_root_chart_2x.png is a 2x resample with conservative sharpening; it does
+not add or reconstruct root glyphs that are absent from the source photo.
+
+The user supplied ForAI.zip with the high-resolution version-specific artwork:
+  Wubi86: 86Hint/729011-20240621005838143-1478196024.png
+  Wubi98: 98Hint/透明码元图Light.png
+The archive also includes 98Hint/透明码元图Dark.png with the same tile layout.
+
+The Wubi86 atlas uses the supplied root artwork, removes the bottom shortcut
+characters, and places key letters and region numbers at the top as in Wubi06.
+The Wubi98 atlas uniformly resizes whole source tiles, preserving their internal
+positions, colors, root shapes, stroke markers, bottom numbers and key letters.
+The source Wubi98 chart has 25 root tiles; the existing neutral Z learning tile
+is added for the 26-key QWERTY atlas. Its rounded alpha edge excludes gutters.
+
+The user-provided pictures retain their original rights. Their adaptation here
+does not relicense them as CC0 or assert a new license for the supplied artwork.
+
+Earlier semantic root-reference checks used WubiMaster's separate 86/98 grids:
+https://github.com/myshiqiqi/WubiMaster/blob/2d0af18bccc1f74c8500de027cb19d09455d7f54/Controls/EtymonKeyControl.xaml
+That reference is licensed under MulanPSL-2.0; the full license remains beside
+this note. Its source font is not bundled in this application update.
+
+At runtime the app displays bitmap crops without recreating radical text or
+loading user dictionaries to draw hints. This update adds no dictionaries,
+Lua modules or font files and does not modify the Rime plugin.
