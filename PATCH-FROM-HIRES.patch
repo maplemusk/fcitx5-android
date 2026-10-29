@@ -1,0 +1,1589 @@
+diff --git a/SCHEMA-FONTS.txt b/SCHEMA-FONTS.txt
+new file mode 100644
+index 0000000000000000000000000000000000000000..92464c699f2f97bd0cbebb754884dcd26e1768f9
+--- /dev/null
++++ b/SCHEMA-FONTS.txt
+@@ -0,0 +1,93 @@
++Fcitx5 Android: fonts by Rime schema / 按 Rime 方案设置字体
++
++This update adds independent font lists and sizes for Candidates, Popup keys,
++and Preedit text in each Rime schema. Ordinary main/alternate keyboard labels
++keep their normal settings. Existing 2x Wubi root pictures remain unchanged.
++
++Windows: update and build the app
++
++1. Back up your current project and keep your release keystore/signing settings.
++2. Extract fcitx5-android-project-update-schema-fonts.zip into your project's
++   actual root (the folder containing gradlew.bat and settings.gradle.kts).
++   Merge folders and replace matching source files. This overlay is for the
++   font-choice/AGP 9.3 project developed in this conversation and includes the
++   subsequent Wubi picture-hint updates. It is not a complete source checkout.
++3. From that folder run:
++     .\gradlew.bat :app:assembleRelease
++4. Sign/install with the same certificate as your existing custom app. A different
++   certificate cannot update it in place. Keep your existing Rime plugin installed;
++   these font changes require rebuilding only the main app.
++
++Set up your requested fonts
++
++1. Copy your HeiTi.ttf and NVSans.ttf to the phone.
++2. Open Fcitx5 settings -> Virtual keyboard -> Fonts -> Import font.
++   Import both files. Font binaries are not included in this update.
++3. In Fonts by Rime schema -> Rime schema, choose wubi06. In its three categories
++   (Candidates, Popup keys, Preedit text), choose HeiTi.ttf separately.
++4. Choose wubi86 and set the same three categories to NVSans.ttf.
++5. Choose wubi98 and set the same three categories to NVSans.ttf.
++6. Leave sizes inherited, or choose a separate size for each area and schema.
++   Return to input and switch schemes from Rime's menu; the fonts follow it.
++
++Requested mapping, for all THREE areas:
++  wubi06  / 新世纪五笔  -> HeiTi.ttf
++  wubi86  / 五笔86      -> NVSans.ttf
++  wubi98  / 五笔98      -> NVSans.ttf
++
++Use the correct font for each decomposition map: matching filenames alone do
++not guarantee that a replacement font contains the required private-use glyphs.
++On Android 10+, multiple selected fonts form the chosen fallback order. On
++Android 6-9, only the first usable selected font is used.
++
++What the settings control
++
++- Candidate text, key-popup text, and Fcitx's own preedit text are independent.
++- Wubi root-hint pictures contain fixed pixels; a font choice does not redraw them.
++- Text inside the app you are typing into uses that app's font.
++- An unset font or size inherits the ordinary setting for that area. Fonts then
++  fall back to Global font; sizes retain the normal role/view size.
++- Clear this schema's overrides restores that schema's ordinary settings.
++- Reset font settings clears global and schema choices but keeps imported fonts.
++- Removing a font clears its selections in every schema; the original file stays.
++
++Custom Wubi06 data with your final Wubi86/98 package
++
++The separate wubi-and-ice-custom06-android.zip is ready to import. It uses your
++rime.zip's five Wubi06 dictionary/OpenCC resources byte-for-byte. Its authored
++Wubi06 compatibility profile retains schema_id wubi06 and name 新世纪五笔,
++independent 正拆/反拆 switches, raw half-width Enter, exact full-Pinyin mixing
++and the prediction model already present in wubi-and-ice-android3.zip.
++All other existing files in that final86/98 ZIP remain byte-for-byte unchanged.
++
++Keep a private export backup, then use Fcitx5 Advanced -> Import user data to
++import the prepared ZIP. Reopen Fcitx5, run Rime Deploy, and restart Fcitx5.
++The imported data does not select the new Android fonts; perform the settings
++steps above. See CUSTOM-WUBI06.txt in the starter kit to reproduce the merge.
++
++If schema fonts do not follow the menu
++
++Deploy the imported Rime files, restart Fcitx5, then check the schema IDs and
++your selections. The app resolves Rime's displayed caption from deployed
++data/rime/build/*.schema.yaml. Missing, unreadable or duplicate captions use
++the ordinary font settings. Give schemes distinct names and deploy again.
++
++验证 / Verification
++
++Main-app Kotlin/Java/resources compiled; 61 targeted font/schema/Wubi tests pass.
++The exact merged Rime ZIP deployed in librime 1.13.1 with Lua and librime-predict;
++custom06 codes, independent 正拆/反拆, half-width raw Enter, Pinyin mixing,
++prediction and Wubi86/98/Ice checks passed. Actual Android display/touch behavior
++has not been device-tested here. This delivery contains source, not a signed APK.
++
++中文快速步骤
++
++1. 将主程序源码更新ZIP解压合并到原项目根目录，保留已有签名文件和配置。
++   执行 .\gradlew.bat :app:assembleRelease，用原证书签名并安装主程序。
++2. 备份后，在Fcitx5“高级 -> 导入用户数据”导入独立的个人Rime ZIP。
++   重新打开app，执行Rime Deploy，再重启Fcitx5。Rime插件沿用已安装版本。
++3. 将HeiTi.ttf和NVSans.ttf复制到手机；“虚拟键盘 -> 字体 -> 导入字体”。
++4. “按Rime方案设置字体”选wubi06，把候选、按键弹出文字、预编辑三项分别
++   设为HeiTi；选wubi86和wubi98，把各自三项分别设为NVSans。
++5. 字号可分别调整，也可留空继承。切换Rime方案时自动切换这些区域的字体。
++   普通按键标签仍沿用原设置；字根图片内容不受字体选择影响。
+diff --git a/app/src/main/java/org/fcitx/fcitx5/android/data/font/FontConfig.kt b/app/src/main/java/org/fcitx/fcitx5/android/data/font/FontConfig.kt
+index dc69e1f1473b78fe8d9a0ffb14c582c723ef85c3..26942afa93bc36e7ead163c0c70d35e7cf992cbb 100644
+--- a/app/src/main/java/org/fcitx/fcitx5/android/data/font/FontConfig.kt
++++ b/app/src/main/java/org/fcitx/fcitx5/android/data/font/FontConfig.kt
+@@ -21,25 +21,55 @@ data class ImportedFont(val id: String, val name: String)
+ 
+ internal data class FontConfig(
+     val fonts: List<ImportedFont> = emptyList(),
+-    val selections: Map<FontRole, FontSelection> = emptyMap()
+-)
++    val selections: Map<FontRole, FontSelection> = emptyMap(),
++    val schemaSelections: Map<String, Map<FontRole, FontSelection>> = emptyMap()
++) {
++    /** Ordered choices; an unavailable schema font falls back to the ordinary role. */
++    fun fontLayers(role: FontRole, schemaId: String?): List<FontSelection> = buildList {
++        if (role in FontConfigCodec.SCHEMA_ROLES) schemaSelections[schemaId]?.get(role)?.let(::add)
++        selections[role]?.let(::add)
++        if (role != FontRole.Global) selections[FontRole.Global]?.let(::add)
++    }
++
++    /** Font sizes never inherit the global size. Schema and font inheritance are independent. */
++    fun roleSize(role: FontRole, schemaId: String?): Float? =
++        (if (role in FontConfigCodec.SCHEMA_ROLES) schemaSelections[schemaId]?.get(role)?.sizeSp else null)
++            ?: selections[role]?.sizeSp
++
++    fun withoutFont(id: String): FontConfig = copy(
++        fonts = fonts.filterNot { it.id == id },
++        selections = selections.mapValues { (_, value) ->
++            value.copy(fontIds = value.fontIds.filterNot { it == id })
++        },
++        schemaSelections = schemaSelections.mapValues { (_, roles) ->
++            roles.mapValues { (_, value) -> value.copy(fontIds = value.fontIds.filterNot { it == id }) }
++                .filterValues { it != FontSelection() }
++        }.filterValues { it.isNotEmpty() }
++    )
++}
+ 
+ /** No file paths are accepted in the settings format. IDs name managed files only. */
+ internal object FontConfigCodec {
+     const val MAX_FONTS = 256
+     const val MAX_FALLBACKS = 8
+     const val MAX_CONFIG_BYTES = 256 * 1024
++    const val MAX_SCHEMAS = 64
++    const val MAX_SCHEMA_ID_LENGTH = 128
++    val SCHEMA_ROLES = setOf(FontRole.Candidate, FontRole.Popup, FontRole.Preedit)
+     private val idPattern = Regex("[0-9a-f]{32}")
++    private val schemaIdPattern = Regex("[A-Za-z0-9][A-Za-z0-9_.-]{0,127}")
+ 
+     fun isValidId(id: String) = idPattern.matches(id)
+ 
++    fun isValidSchemaId(id: String) = schemaIdPattern.matches(id)
++
+     fun isValidSize(size: Float) = size.isFinite() && size in 8f..72f
+ 
+     fun displayName(raw: String): String = raw.substringAfterLast('/').substringAfterLast('\\')
+         .filterNot { it.isISOControl() }.trim().take(128).ifEmpty { "Imported font" }
+ 
+     fun decode(raw: String): FontConfig = runCatching {
+-        if (raw.length > MAX_CONFIG_BYTES) return FontConfig()
++        if (raw.length > MAX_CONFIG_BYTES || raw.toByteArray(Charsets.UTF_8).size > MAX_CONFIG_BYTES) return FontConfig()
+         val root = Json.parseToJsonElement(raw) as? JsonObject ?: return FontConfig()
+         if ((root["version"] as? JsonPrimitive)?.intOrNull != 1) return FontConfig()
+         val fonts = (root["fonts"] as? JsonArray).orEmpty().asSequence()
+@@ -51,16 +81,22 @@ internal object FontConfigCodec {
+                 ImportedFont(id, displayName(name))
+             }.distinctBy { it.id }.take(MAX_FONTS).toList()
+         val knownIds = fonts.mapTo(hashSetOf()) { it.id }
+-        val selectionsJson = root["selections"] as? JsonObject
+-        val selections = FontRole.entries.mapNotNull { role ->
+-            val item = selectionsJson?.get(role.name) as? JsonObject ?: return@mapNotNull null
++        fun selections(value: JsonObject?, roles: Iterable<FontRole>): Map<FontRole, FontSelection> = roles.mapNotNull { role ->
++            val item = value?.get(role.name) as? JsonObject ?: return@mapNotNull null
+             val ids = (item["fontIds"] as? JsonArray).orEmpty().mapNotNull {
+                 (it as? JsonPrimitive)?.contentOrNull?.takeIf(knownIds::contains)
+             }.distinct().take(MAX_FALLBACKS)
+             val size = (item["sizeSp"] as? JsonPrimitive)?.floatOrNull?.takeIf(::isValidSize)
+             role to FontSelection(ids, size)
+         }.toMap()
+-        FontConfig(fonts, selections)
++        val selections = selections(root["selections"] as? JsonObject, FontRole.entries)
++        val schemas = (root["schemaSelections"] as? JsonObject).orEmpty().asSequence()
++            .filter { (id, _) -> isValidSchemaId(id) }
++            .mapNotNull { (id, value) ->
++                val roles = selections(value as? JsonObject, SCHEMA_ROLES).filterValues { it != FontSelection() }
++                if (roles.isEmpty()) null else id to roles
++            }.take(MAX_SCHEMAS).toMap()
++        FontConfig(fonts, selections, schemas)
+     }.getOrDefault(FontConfig())
+ 
+     fun encode(config: FontConfig): String = buildJsonObject {
+@@ -79,5 +115,19 @@ internal object FontConfigCodec {
+                 })
+             }
+         })
++        // Keep the original version so earlier builds retain their font library
++        // and ordinary choices; unknown fields are ignored on downgrade.
++        put("schemaSelections", buildJsonObject {
++            config.schemaSelections.forEach { (schemaId, selections) ->
++                put(schemaId, buildJsonObject {
++                    selections.forEach { (role, selection) ->
++                        put(role.name, buildJsonObject {
++                            put("fontIds", JsonArray(selection.fontIds.map(::JsonPrimitive)))
++                            selection.sizeSp?.let { put("sizeSp", JsonPrimitive(it)) }
++                        })
++                    }
++                })
++            }
++        })
+     }.toString()
+ }
+diff --git a/app/src/main/java/org/fcitx/fcitx5/android/data/font/FontManager.kt b/app/src/main/java/org/fcitx/fcitx5/android/data/font/FontManager.kt
+index 31d8d16d2bbffad40ee32a4ce9b1463b1b0406e8..725ed67c64010c1e16e8fb6433f4fd621734730d 100644
+--- a/app/src/main/java/org/fcitx/fcitx5/android/data/font/FontManager.kt
++++ b/app/src/main/java/org/fcitx/fcitx5/android/data/font/FontManager.kt
+@@ -19,6 +19,7 @@ import android.widget.TextView
+ import androidx.annotation.RequiresApi
+ import org.fcitx.fcitx5.android.utils.appContext
+ import java.io.File
++import java.lang.ref.WeakReference
+ import java.util.UUID
+ import java.util.WeakHashMap
+ import java.util.concurrent.CopyOnWriteArraySet
+@@ -40,11 +41,20 @@ object FontManager {
+ 
+     val revision: Long get() = changes.get()
+ 
++    @Volatile
++    private var activeSchema: String? = null
++
++    /** Runtime-only context. Schema switches never change the persisted-settings revision. */
++    val activeRimeSchema: String? get() = activeSchema
++
+     private data class ViewDefaults(
+         var typeface: Typeface?,
+         var sizePx: Float,
+         var appliedTypeface: Typeface? = typeface,
+-        var appliedSizePx: Float = sizePx
++        var appliedSizePx: Float = sizePx,
++        var role: FontRole = FontRole.Global,
++        var followsActiveSchema: Boolean = true,
++        var schemaId: String? = null
+     )
+ 
+     // Values do not hold their TextView keys alive.
+@@ -83,10 +93,12 @@ object FontManager {
+     }
+ 
+     private fun saveLocked(updated: FontConfig) {
++        val encoded = FontConfigCodec.encode(updated).toByteArray(Charsets.UTF_8)
++        require(encoded.size <= FontConfigCodec.MAX_CONFIG_BYTES) { "Font settings exceed the supported size" }
+         val file = settingsFile()
+         val output = file.startWrite()
+         try {
+-            output.write(FontConfigCodec.encode(updated).toByteArray(Charsets.UTF_8))
++            output.write(encoded)
+             file.finishWrite(output)
+         } catch (error: Throwable) {
+             file.failWrite(output)
+@@ -98,10 +110,30 @@ object FontManager {
+     }
+ 
+     private fun notifyChanged() {
+-        val notify = Runnable { listeners.forEach { listener -> runCatching { listener.onFontsChanged() } } }
++        val notify = Runnable {
++            refreshViews(schemaOnly = false)
++            listeners.forEach { listener -> runCatching { listener.onFontsChanged() } }
++        }
+         if (Looper.myLooper() == Looper.getMainLooper()) notify.run() else mainHandler.post(notify)
+     }
+ 
++    fun setActiveRimeSchema(schemaId: String?) {
++        val normalized = schemaId?.takeIf(FontConfigCodec::isValidSchemaId)
++        if (activeSchema == normalized) return
++        activeSchema = normalized
++        val update = Runnable { refreshViews(schemaOnly = true) }
++        if (Looper.myLooper() == Looper.getMainLooper()) update.run() else mainHandler.post(update)
++    }
++
++    private fun refreshViews(schemaOnly: Boolean) {
++        // Snapshot weak entries only while applying. No permanent value retains a view.
++        viewDefaults.entries.map { it.key to it.value }.forEach { (view, defaults) ->
++            if (!schemaOnly || defaults.followsActiveSchema && defaults.role in FontConfigCodec.SCHEMA_ROLES) {
++                applyBound(view, defaults.role, defaults.followsActiveSchema, defaults.schemaId)
++            }
++        }
++    }
++
+     fun addOnChangeListener(listener: OnChangeListener) {
+         listeners.add(listener)
+     }
+@@ -118,17 +150,44 @@ object FontManager {
+         }
+     }
+ 
+-    fun setSelection(role: FontRole, selection: FontSelection) {
+-        requireUnlocked()
++    fun getSchemaSelection(schemaId: String, role: FontRole): FontSelection {
++        requireSchemaRole(schemaId, role)
++        if (!unlocked()) return FontSelection()
++        return synchronized(lock) {
++            val selection = loadLocked().schemaSelections[schemaId]?.get(role) ?: FontSelection()
++            selection.copy(fontIds = selection.fontIds.toList())
++        }
++    }
++
++    fun listConfiguredSchemas(): Set<String> {
++        if (!unlocked()) return emptySet()
++        return synchronized(lock) { loadLocked().schemaSelections.keys.toSet() }
++    }
++
++    private fun requireSchemaRole(schemaId: String, role: FontRole) {
++        require(FontConfigCodec.isValidSchemaId(schemaId)) { "Invalid Rime schema ID" }
++        require(role in FontConfigCodec.SCHEMA_ROLES) { "Schema fonts apply only to candidates, popups and preedit" }
++    }
++
++    private fun normalizeSelection(selection: FontSelection): FontSelection {
+         require(selection.fontIds.size <= FontConfigCodec.MAX_FALLBACKS) { "Select at most eight fallback fonts" }
+         require(selection.sizeSp == null || FontConfigCodec.isValidSize(selection.sizeSp)) { "Font size must be between 8 and 72 sp" }
+-        val normalized = selection.copy(fontIds = selection.fontIds.distinct().toList())
++        return selection.copy(fontIds = selection.fontIds.distinct().toList())
++    }
++
++    private fun requireAvailableFonts(current: FontConfig, selection: FontSelection) {
++        val known = current.fonts.mapTo(hashSetOf()) { it.id }
++        require(selection.fontIds.all { it in known && FontFileStore.managedFile(directory(), it).isFile }) {
++            "Selected font is unavailable"
++        }
++    }
++
++    fun setSelection(role: FontRole, selection: FontSelection) {
++        requireUnlocked()
++        val normalized = normalizeSelection(selection)
+         val changed = synchronized(lock) {
+             val current = loadLocked()
+-            val known = current.fonts.mapTo(hashSetOf()) { it.id }
+-            require(normalized.fontIds.all { it in known && FontFileStore.managedFile(directory(), it).isFile }) {
+-                "Selected font is unavailable"
+-            }
++            requireAvailableFonts(current, normalized)
+             if ((current.selections[role] ?: FontSelection()) == normalized) return@synchronized false
+             val selections = current.selections.toMutableMap()
+             if (normalized == FontSelection()) selections.remove(role) else selections[role] = normalized
+@@ -138,6 +197,40 @@ object FontManager {
+         if (changed) notifyChanged()
+     }
+ 
++    fun setSchemaSelection(schemaId: String, role: FontRole, selection: FontSelection) {
++        requireUnlocked()
++        requireSchemaRole(schemaId, role)
++        val normalized = normalizeSelection(selection)
++        val changed = synchronized(lock) {
++            val current = loadLocked()
++            requireAvailableFonts(current, normalized)
++            val roles = current.schemaSelections[schemaId].orEmpty()
++            if ((roles[role] ?: FontSelection()) == normalized) return@synchronized false
++            require(schemaId in current.schemaSelections || current.schemaSelections.size < FontConfigCodec.MAX_SCHEMAS) {
++                "Remove a schema font override before adding more"
++            }
++            val updatedRoles = roles.toMutableMap()
++            if (normalized == FontSelection()) updatedRoles.remove(role) else updatedRoles[role] = normalized
++            val schemas = current.schemaSelections.toMutableMap()
++            if (updatedRoles.isEmpty()) schemas.remove(schemaId) else schemas[schemaId] = updatedRoles
++            saveLocked(current.copy(schemaSelections = schemas))
++            true
++        }
++        if (changed) notifyChanged()
++    }
++
++    fun clearSchemaSelections(schemaId: String) {
++        requireUnlocked()
++        require(FontConfigCodec.isValidSchemaId(schemaId)) { "Invalid Rime schema ID" }
++        val changed = synchronized(lock) {
++            val current = loadLocked()
++            if (schemaId !in current.schemaSelections) return@synchronized false
++            saveLocked(current.copy(schemaSelections = current.schemaSelections - schemaId))
++            true
++        }
++        if (changed) notifyChanged()
++    }
++
+     fun listFonts(): List<ImportedFont> {
+         if (!unlocked()) return emptyList()
+         return synchronized(lock) {
+@@ -198,12 +291,7 @@ object FontManager {
+         val changed = synchronized(lock) {
+             val current = loadLocked()
+             if (current.fonts.none { it.id == id }) return@synchronized false
+-            val updated = current.copy(
+-                fonts = current.fonts.filterNot { it.id == id },
+-                selections = current.selections.mapValues { (_, value) ->
+-                    value.copy(fontIds = value.fontIds.filterNot { it == id })
+-                }
+-            )
++            val updated = current.withoutFont(id)
+             saveLocked(updated)
+             // If cleanup fails, the orphan remains private and is no longer used.
+             runCatching { FontFileStore.managedFile(directory(), id).delete() }
+@@ -217,21 +305,23 @@ object FontManager {
+         requireUnlocked()
+         val changed = synchronized(lock) {
+             val current = loadLocked()
+-            if (current.selections.isEmpty()) return@synchronized false
+-            saveLocked(current.copy(selections = emptyMap()))
++            if (current.selections.isEmpty() && current.schemaSelections.isEmpty()) return@synchronized false
++            saveLocked(current.copy(selections = emptyMap(), schemaSelections = emptyMap()))
+             true
+         }
+         if (changed) notifyChanged()
+     }
+ 
+-    fun resolveTypeface(role: FontRole, default: Typeface?): Typeface? {
++    fun resolveTypeface(role: FontRole, default: Typeface?): Typeface? =
++        resolveTypeface(role, default, activeSchema)
++
++    /** Explicit context is used by settings previews, including null for ordinary fonts. */
++    fun resolveTypeface(role: FontRole, default: Typeface?, schemaId: String?): Typeface? {
+         if (!unlocked()) return default
+         return synchronized(lock) {
+             val current = loadLocked()
+-            val roleTypeface = resolveChainLocked(current.selections[role]?.fontIds.orEmpty())
+-            val globalTypeface = if (roleTypeface == null && role != FontRole.Global)
+-                resolveChainLocked(current.selections[FontRole.Global]?.fontIds.orEmpty()) else null
+-            val custom = roleTypeface ?: globalTypeface ?: return@synchronized default
++            val custom = current.fontLayers(role, schemaId)
++                .firstNotNullOfOrNull { resolveChainLocked(it.fontIds) } ?: return@synchronized default
+             Typeface.create(custom, default?.style ?: Typeface.NORMAL)
+         }
+     }
+@@ -283,14 +373,28 @@ object FontManager {
+     }
+ 
+     /** Call after the view's ordinary defaults are set. Clearing a selection restores those defaults. */
+-    fun applyTo(view: TextView, role: FontRole) {
++    fun applyTo(view: TextView, role: FontRole) = applyBound(view, role, followsActiveSchema = true, schemaId = null)
++
++    /** Explicitly bind a preview to a schema, or to ordinary settings when schemaId is null. */
++    fun applyTo(view: TextView, role: FontRole, schemaId: String?) =
++        applyBound(view, role, followsActiveSchema = false, schemaId = schemaId)
++
++    private fun applyBound(view: TextView, role: FontRole, followsActiveSchema: Boolean, schemaId: String?) {
++        if (Looper.myLooper() != Looper.getMainLooper()) {
++            val weak = WeakReference(view)
++            mainHandler.post { weak.get()?.let { applyBound(it, role, followsActiveSchema, schemaId) } }
++            return
++        }
+         val baseline = viewDefaults.getOrPut(view) { ViewDefaults(view.typeface, view.textSize) }
++        baseline.role = role
++        baseline.followsActiveSchema = followsActiveSchema
++        baseline.schemaId = schemaId
+         if (view.typeface != baseline.appliedTypeface) baseline.typeface = view.typeface
+         if (abs(view.textSize - baseline.appliedSizePx) > 0.01f) baseline.sizePx = view.textSize
+-        val typeface = resolveTypeface(role, baseline.typeface)
++        val effectiveSchema = if (followsActiveSchema) activeSchema else schemaId
++        val typeface = resolveTypeface(role, baseline.typeface, effectiveSchema)
+         if (view.typeface != typeface) view.typeface = typeface
+-        // A global font choice is inherited; its size never overrides a role's own default.
+-        val size = getSelection(role).sizeSp
++        val size = if (!unlocked()) null else synchronized(lock) { loadLocked().roleSize(role, effectiveSchema) }
+         val sizePx = if (size != null) TypedValue.applyDimension(
+             TypedValue.COMPLEX_UNIT_SP, size, view.resources.displayMetrics
+         ) else baseline.sizePx
+diff --git a/app/src/main/java/org/fcitx/fcitx5/android/data/rime/RimeSchemaResolver.kt b/app/src/main/java/org/fcitx/fcitx5/android/data/rime/RimeSchemaResolver.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..710b94ee78e76c4933523bcf92e8a1a7799f8167
+--- /dev/null
++++ b/app/src/main/java/org/fcitx/fcitx5/android/data/rime/RimeSchemaResolver.kt
+@@ -0,0 +1,268 @@
++/*
++ * SPDX-License-Identifier: LGPL-2.1-or-later
++ * SPDX-FileCopyrightText: Copyright 2026 Fcitx5 for Android Contributors
++ */
++package org.fcitx.fcitx5.android.data.rime
++
++import java.io.File
++import java.nio.ByteBuffer
++import java.nio.charset.CodingErrorAction
++
++/** A deployed schema's stable identifier and user-facing caption. */
++data class RimeSchema(val id: String, val name: String)
++
++/**
++ * Resolve Fcitx's displayed Rime caption against bounded, compiled schema metadata.
++ * This is a caption lookup, not a native query of the active Rime schema ID.
++ * File I/O belongs on an I/O dispatcher. Invalid or ambiguous metadata fails closed.
++ */
++class RimeSchemaResolver(private val directory: File) {
++    fun resolve(displayName: String): RimeSchema? = runCatching {
++        if (displayName.isBlank()) return null
++        val metadata = readSchemas() ?: return null
++        val selected = metadata.entries.singleOrNull { it.value.name == displayName } ?: return null
++        selected.value.takeIf { selected.key == "${it.id}.schema.yaml" }
++    }.getOrNull()
++
++    /** List canonical, unambiguous deployed schemas, including auxiliary schemas. */
++    fun listSchemas(): List<RimeSchema> = runCatching {
++        val metadata = readSchemas() ?: return emptyList()
++        canonicalSchemas(metadata)
++    }.getOrDefault(emptyList())
++
++    /** Prefer the configured Rime menu order; fall back to deployed schemas if unavailable. */
++    fun listMenuSchemas(): List<RimeSchema> = runCatching {
++        val metadata = readSchemas() ?: return emptyList()
++        val schemas = canonicalSchemas(metadata)
++        val menu = runCatching { readMenuIds() }.getOrNull() ?: return schemas
++        val byId = schemas.associateBy { it.id }
++        menu.mapNotNull(byId::get)
++    }.getOrDefault(emptyList())
++
++    private fun canonicalSchemas(metadata: Map<String, RimeSchema>): List<RimeSchema> {
++        val names = metadata.values.groupingBy { it.name }.eachCount()
++        return metadata.entries.asSequence()
++            .filter { (file, schema) -> file == "${schema.id}.schema.yaml" && names[schema.name] == 1 }
++            .map { it.value }.sortedBy { it.id }.toList()
++    }
++
++    private fun readSchemas(): Map<String, RimeSchema>? {
++        val root = directory.canonicalFile
++        val files = root.listFiles { file -> file.name.endsWith(".schema.yaml") } ?: return null
++        if (files.isEmpty() || files.size > MAX_FILES) return null
++        var totalBytes = 0L
++        return files.associate { file ->
++            val length = file.length()
++            totalBytes += length
++            if (totalBytes > MAX_TOTAL_BYTES) return null
++            val text = readText(root, file, length) ?: return null
++            val schema = parseSchema(text) ?: return null
++            if (!schemaIdPattern.matches(schema.id)) return null
++            file.name to schema
++        }
++    }
++
++    private fun readText(root: File, file: File, expectedLength: Long = file.length()): String? {
++        // Do not follow a schema/default-shaped symlink outside the selected folder.
++        if (!file.isFile || file.canonicalFile != File(root, file.name)) return null
++        if (expectedLength <= 0 || expectedLength > MAX_FILE_BYTES) return null
++        val bytes = file.inputStream().use { input ->
++            val data = ByteArray(MAX_FILE_BYTES + 1)
++            var used = 0
++            while (used < data.size) {
++                val count = input.read(data, used, data.size - used)
++                if (count < 0) break
++                if (count == 0) continue
++                used += count
++            }
++            if (used > MAX_FILE_BYTES || used.toLong() != expectedLength) return null
++            data.copyOf(used)
++        }
++        return Charsets.UTF_8.newDecoder()
++            .onMalformedInput(CodingErrorAction.REPORT)
++            .onUnmappableCharacter(CodingErrorAction.REPORT)
++            .decode(ByteBuffer.wrap(bytes)).toString().removePrefix("\uFEFF")
++    }
++
++    /** Read the simple block-list format emitted by Rime's deployed yaml-cpp config. */
++    private fun readMenuIds(): List<String>? {
++        val root = directory.canonicalFile
++        val file = File(root, "default.yaml")
++        val text = readText(root, file) ?: return null
++        var inList = false
++        var sawList = false
++        val ids = mutableListOf<String>()
++        for (raw in text.lineSequence()) {
++            val line = raw.removeSuffix("\r")
++            if (line.isBlank() || line.trimStart().startsWith('#')) continue
++            val indent = line.indexOfFirst { !it.isWhitespace() }
++            if (line.take(indent).any { it != ' ' }) return null
++            val content = line.substring(indent)
++            if (indent == 0) {
++                inList = false
++                val mapping = mappingEntry(content)
++                if (mapping?.first == "schema_list") {
++                    if (sawList) return null
++                    sawList = true
++                    val value = stripComment(mapping.second)
++                    if (value == "[]") continue
++                    if (value.isNotEmpty()) return null
++                    inList = true
++                }
++                continue
++            }
++            if (!inList) continue
++            if (!content.startsWith("- ")) return null
++            val mapping = mappingEntry(content.substring(2)) ?: return null
++            if (mapping.first != "schema") return null
++            val id = scalar(mapping.second)?.takeIf(schemaIdPattern::matches) ?: return null
++            if (id in ids || ids.size >= MAX_FILES) return null
++            ids.add(id)
++        }
++        return ids.takeIf { sawList }
++    }
++
++    /** Read only direct children of the root schema mapping; ignore the rest of the schema. */
++    private fun parseSchema(text: String): RimeSchema? {
++        var inSchema = false
++        var sawSchema = false
++        var childIndent: Int? = null
++        var lastDirectKey: String? = null
++        var id: String? = null
++        var name: String? = null
++        for (raw in text.lineSequence()) {
++            val line = raw.removeSuffix("\r")
++            if (line.isBlank() || line.trimStart().startsWith('#')) continue
++            val indent = line.indexOfFirst { !it.isWhitespace() }
++            if (line.take(indent).any { it != ' ' }) return null
++            val content = line.substring(indent)
++            if (indent == 0) {
++                inSchema = false
++                if (content.startsWith('\'') || content.startsWith('"')) return null
++                val mapping = mappingEntry(content)
++                if (mapping?.first == "schema") {
++                    if (sawSchema || stripComment(mapping.second).isNotEmpty()) return null
++                    sawSchema = true
++                    inSchema = true
++                }
++                continue
++            }
++            if (!inSchema) continue
++            val level = childIndent ?: indent.also { childIndent = it }
++            if (indent < level) return null
++            if (indent > level) {
++                if (lastDirectKey == "schema_id" || lastDirectKey == "name") return null
++                continue
++            }
++            val entry = mappingEntry(content) ?: return null
++            lastDirectKey = entry.first
++            when (entry.first) {
++                "schema_id" -> {
++                    if (id != null) return null
++                    id = scalar(entry.second) ?: return null
++                }
++                "name" -> {
++                    if (name != null) return null
++                    name = scalar(entry.second) ?: return null
++                }
++            }
++        }
++        return if (sawSchema && !id.isNullOrBlank() && !name.isNullOrBlank()) RimeSchema(id, name) else null
++    }
++
++    private fun mappingEntry(line: String): Pair<String, String>? {
++        val colon = line.indexOf(':')
++        if (colon <= 0 || (colon + 1 < line.length && !line[colon + 1].isWhitespace())) return null
++        val key = line.substring(0, colon)
++        if (!key.all { it.isLetterOrDigit() || it == '_' || it == '-' }) return null
++        return key to line.substring(colon + 1).trimStart()
++    }
++
++    private fun stripComment(value: String): String {
++        val comment = value.indices.firstOrNull { value[it] == '#' && (it == 0 || value[it - 1].isWhitespace()) }
++        return (comment?.let { value.substring(0, it) } ?: value).trim()
++    }
++
++    /** A deliberately small, fail-closed subset of YAML scalar syntax emitted by yaml-cpp. */
++    private fun scalar(raw: String): String? {
++        val value = raw.trimStart()
++        if (value.isEmpty()) return null
++        if (value[0] != '\'' && value[0] != '"') {
++            val plain = stripComment(value)
++            if (plain.isEmpty() || plain[0] in "!&*|>{[" || plain in setOf("~", "null", "Null", "NULL") ||
++                plain.indices.any { plain[it] == ':' && (it + 1 == plain.length || plain[it + 1].isWhitespace()) }
++            ) return null
++            return plain.takeIf(::validScalar)
++        }
++        val quote = value[0]
++        val result = StringBuilder()
++        var index = 1
++        while (index < value.length) {
++            val character = value[index++]
++            if (character == quote) {
++                if (quote == '\'' && index < value.length && value[index] == '\'') {
++                    result.append('\'')
++                    index++
++                    continue
++                }
++                val rest = value.substring(index)
++                if (rest.isNotEmpty() && !rest[0].isWhitespace()) return null
++                if (stripComment(rest).isNotEmpty()) return null
++                return result.toString().takeIf(::validScalar)
++            }
++            if (character != '\\' || quote == '\'') {
++                result.append(character)
++                continue
++            }
++            if (index >= value.length) return null
++            when (val escape = value[index++]) {
++                '\\', '"', '/', ' ' -> result.append(escape)
++                '0' -> result.append('\u0000')
++                'a' -> result.append('\u0007')
++                'b' -> result.append('\b')
++                't' -> result.append('\t')
++                'n' -> result.append('\n')
++                'v' -> result.append('\u000B')
++                'f' -> result.append('\u000C')
++                'r' -> result.append('\r')
++                'e' -> result.append('\u001B')
++                'N' -> result.append('\u0085')
++                '_' -> result.append('\u00A0')
++                'L' -> result.append('\u2028')
++                'P' -> result.append('\u2029')
++                'x', 'u', 'U' -> {
++                    val digits = when (escape) { 'x' -> 2; 'u' -> 4; else -> 8 }
++                    if (index + digits > value.length) return null
++                    val hex = value.substring(index, index + digits)
++                    if (!hex.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }) return null
++                    val code = hex.toLongOrNull(16) ?: return null
++                    if (code > Character.MAX_CODE_POINT) return null
++                    if (escape == 'U' && code in 0xD800L..0xDFFFL) return null
++                    result.append(String(Character.toChars(code.toInt())))
++                    index += digits
++                }
++                else -> return null
++            }
++        }
++        return null // Multiline quoted values are outside this metadata reader's subset.
++    }
++
++    private fun validScalar(value: String): Boolean {
++        if (value.isBlank() || value.any { it.isISOControl() || it == '\u2028' || it == '\u2029' }) return false
++        var index = 0
++        while (index < value.length) {
++            val character = value[index++]
++            if (Character.isHighSurrogate(character)) {
++                if (index >= value.length || !Character.isLowSurrogate(value[index++])) return false
++            } else if (Character.isLowSurrogate(character)) return false
++        }
++        return true
++    }
++
++    private companion object {
++        val schemaIdPattern = Regex("[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}")
++        const val MAX_FILES = 64
++        const val MAX_FILE_BYTES = 128 * 1024
++        const val MAX_TOTAL_BYTES = 2L * 1024 * 1024
++    }
++}
+diff --git a/app/src/main/java/org/fcitx/fcitx5/android/input/FcitxInputMethodService.kt b/app/src/main/java/org/fcitx/fcitx5/android/input/FcitxInputMethodService.kt
+index 2f50baa757943c0b783e0bc04ea8523cbee71df0..e1d1e3617bf348de483494b04882eac31ea9fda5 100644
+--- a/app/src/main/java/org/fcitx/fcitx5/android/input/FcitxInputMethodService.kt
++++ b/app/src/main/java/org/fcitx/fcitx5/android/input/FcitxInputMethodService.kt
+@@ -41,16 +41,19 @@ import androidx.autofill.inline.v1.InlineSuggestionUi
+ import androidx.core.view.updateLayoutParams
+ import androidx.lifecycle.lifecycleScope
+ import kotlinx.coroutines.CoroutineStart
++import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.Job
+ import kotlinx.coroutines.channels.Channel
+ import kotlinx.coroutines.channels.consumeEach
+ import kotlinx.coroutines.launch
++import kotlinx.coroutines.withContext
+ import org.fcitx.fcitx5.android.R
+ import org.fcitx.fcitx5.android.core.CapabilityFlags
+ import org.fcitx.fcitx5.android.core.FcitxAPI
+ import org.fcitx.fcitx5.android.core.FcitxEvent
+ import org.fcitx.fcitx5.android.core.FcitxKeyMapping
+ import org.fcitx.fcitx5.android.core.FormattedText
++import org.fcitx.fcitx5.android.core.InputMethodEntry
+ import org.fcitx.fcitx5.android.core.KeyStates
+ import org.fcitx.fcitx5.android.core.KeySym
+ import org.fcitx.fcitx5.android.core.ScancodeMapping
+@@ -62,6 +65,7 @@ import org.fcitx.fcitx5.android.data.font.FontManager
+ import org.fcitx.fcitx5.android.data.prefs.AppPrefs
+ import org.fcitx.fcitx5.android.data.prefs.ManagedPreference
+ import org.fcitx.fcitx5.android.data.prefs.ManagedPreferenceProvider
++import org.fcitx.fcitx5.android.data.rime.RimeSchemaResolver
+ import org.fcitx.fcitx5.android.data.theme.Theme
+ import org.fcitx.fcitx5.android.data.theme.ThemeManager
+ import org.fcitx.fcitx5.android.input.cursor.CursorRange
+@@ -104,6 +108,37 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
+     private var candidatesView: CandidatesView? = null
+     private var appliedFontRevision = -1L
+ 
++    private var fontSchemaKey: Pair<String, String>? = null
++    private var fontSchemaJob: Job? = null
++    private var fontSchemaGeneration = 0L
++    private var fontSchemaDisposed = false
++
++    /** Track schemas centrally so hardware candidates and cached popup views update too. */
++    private fun updateRimeFontSchema(ime: InputMethodEntry, force: Boolean = false) {
++        if (fontSchemaDisposed) return
++        val key = ime.uniqueName to ime.subMode.name
++        if (!force && key == fontSchemaKey) return
++        fontSchemaKey = key
++        val generation = ++fontSchemaGeneration
++        fontSchemaJob?.cancel()
++        fontSchemaJob = null
++        // Do not keep the previous schema's font during an unresolved/new lookup.
++        FontManager.setActiveRimeSchema(null)
++        if (ime.uniqueName != "rime" || ime.subMode.name.isBlank()) return
++        fontSchemaJob = lifecycleScope.launch {
++            val schemaId = withContext(Dispatchers.IO) {
++                // Storage can become available after unlock; never cache a failed lookup.
++                runCatching {
++                    getExternalFilesDir(null)?.resolve("data/rime/build")
++                        ?.let(::RimeSchemaResolver)?.resolve(ime.subMode.name)?.id
++                }.getOrNull()
++            }
++            if (!fontSchemaDisposed && generation == fontSchemaGeneration) {
++                FontManager.setActiveRimeSchema(schemaId)
++            }
++        }
++    }
++
+     private val navbarMgr = NavigationBarManager()
+     private val inputDeviceMgr = InputDeviceManager { isVirtualKeyboard ->
+         postFcitxJob {
+@@ -323,6 +358,7 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
+                 handleDeleteSurrounding(before, after)
+             }
+             is FcitxEvent.IMChangeEvent -> {
++                updateRimeFontSchema(event.data)
+                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                     val im = event.data.uniqueName
+                     val subtype = SubtypeManager.subtypeOf(im) ?: return
+@@ -334,6 +370,10 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
+                     showStatusIcon(StatusIconMapping.fromEntry(event.data))
+                 }
+             }
++            is FcitxEvent.StatusAreaEvent -> {
++                // Rime schema changes can arrive without an IMChangeEvent.
++                updateRimeFontSchema(event.data.im)
++            }
+             is FcitxEvent.SwitchInputMethodEvent -> {
+                 val (reason) = event.data
+                 if (reason != FcitxEvent.SwitchInputMethodEvent.Reason.CapabilityChanged &&
+@@ -738,6 +778,8 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
+     }
+ 
+     override fun onStartInput(attribute: EditorInfo, restarting: Boolean) {
++        // Re-read deployed metadata even if the caption is unchanged after Deploy.
++        updateRimeFontSchema(fcitx.runImmediately { inputMethodEntryCached }, force = true)
+         refreshFontsIfNeeded()
+         // update selection as soon as possible
+         // sometimes when restarting input, onUpdateSelection happens before onStartInput, and
+@@ -1100,6 +1142,11 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
+     }
+ 
+     override fun onDestroy() {
++        fontSchemaDisposed = true
++        ++fontSchemaGeneration
++        fontSchemaJob?.cancel()
++        fontSchemaJob = null
++        FontManager.setActiveRimeSchema(null)
+         recreateInputViewPrefs.forEach {
+             it.unregisterOnChangeListener(recreateInputViewListener)
+         }
+diff --git a/app/src/main/java/org/fcitx/fcitx5/android/input/preedit/PreeditUi.kt b/app/src/main/java/org/fcitx/fcitx5/android/input/preedit/PreeditUi.kt
+index a3cbd569f9fe0048a446a378fa2720f506729cd7..95ea0f671064e23e8ad37be23ab31f489060196f 100644
+--- a/app/src/main/java/org/fcitx/fcitx5/android/input/preedit/PreeditUi.kt
++++ b/app/src/main/java/org/fcitx/fcitx5/android/input/preedit/PreeditUi.kt
+@@ -34,12 +34,24 @@ open class PreeditUi(
+ 
+     class CursorSpan(ctx: Context, @ColorInt color: Int, metrics: Paint.FontMetricsInt) :
+         DynamicDrawableSpan() {
++        private val width = ctx.dp(1)
+         private val drawable = ShapeDrawable(RectShape()).apply {
+             paint.color = color
+-            setBounds(0, metrics.ascent, ctx.dp(1), metrics.bottom)
++            setBounds(0, metrics.ascent, width, metrics.bottom)
+         }
+ 
+         override fun getDrawable() = drawable
++
++        override fun getSize(
++            paint: Paint, text: CharSequence, start: Int, end: Int,
++            fm: Paint.FontMetricsInt?
++        ): Int {
++            // The same preedit view survives schema/font changes. Measure its
++            // cursor with the current text paint instead of the original font.
++            val current = paint.fontMetricsInt
++            drawable.setBounds(0, current.ascent, width, current.bottom)
++            return super.getSize(paint, text, start, end, fm)
++        }
+     }
+ 
+     private val cursorSpan by lazy {
+diff --git a/app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/behavior/FontSettingsFragment.kt b/app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/behavior/FontSettingsFragment.kt
+index da9d16d3810e893009c90a2387322b4dca0774c2..0e1a04242cb045b412f19ad1f3b13a8542482e2f 100644
+--- a/app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/behavior/FontSettingsFragment.kt
++++ b/app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/behavior/FontSettingsFragment.kt
+@@ -19,11 +19,16 @@ import androidx.preference.Preference
+ import androidx.preference.PreferenceViewHolder
+ import kotlinx.coroutines.CancellationException
+ import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.Job
+ import kotlinx.coroutines.launch
+ import kotlinx.coroutines.withContext
+ import org.fcitx.fcitx5.android.R
++import org.fcitx.fcitx5.android.data.font.FontConfigCodec
+ import org.fcitx.fcitx5.android.data.font.FontManager
+ import org.fcitx.fcitx5.android.data.font.FontRole
++import org.fcitx.fcitx5.android.data.font.FontSelection
++import org.fcitx.fcitx5.android.data.rime.RimeSchema
++import org.fcitx.fcitx5.android.data.rime.RimeSchemaResolver
+ import org.fcitx.fcitx5.android.ui.common.PaddingPreferenceFragment
+ import org.fcitx.fcitx5.android.utils.addCategory
+ import org.fcitx.fcitx5.android.utils.addPreference
+@@ -33,6 +38,10 @@ import java.text.NumberFormat
+ /** Local font selection. Importing never grants persistent access to the source document. */
+ class FontSettingsFragment : PaddingPreferenceFragment() {
+     private var importing = false
++    private var selectedSchemaId = "wubi06"
++    private var installedSchemas = emptyList<RimeSchema>()
++    private var schemaLookupJob: Job? = null
++    private var schemaLookupGeneration = 0
+ 
+     private val importFont: ActivityResultLauncher<Array<String>> = registerForActivityResult(
+         ActivityResultContracts.OpenDocument()
+@@ -56,12 +65,49 @@ class FontSettingsFragment : PaddingPreferenceFragment() {
+     }
+ 
+     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
++        selectedSchemaId = savedInstanceState?.getString(SELECTED_SCHEMA)
++            ?.takeIf(FontConfigCodec::isValidSchemaId) ?: selectedSchemaId
+         rebuildPreferences()
+     }
+ 
+     override fun onResume() {
+         super.onResume()
+         rebuildPreferences()
++        refreshSchemas()
++    }
++
++    override fun onSaveInstanceState(outState: Bundle) {
++        outState.putString(SELECTED_SCHEMA, selectedSchemaId)
++        super.onSaveInstanceState(outState)
++    }
++
++    override fun onDestroyView() {
++        ++schemaLookupGeneration
++        schemaLookupJob?.cancel()
++        schemaLookupJob = null
++        super.onDestroyView()
++    }
++
++    private fun refreshSchemas() {
++        val app = context?.applicationContext ?: return
++        val generation = ++schemaLookupGeneration
++        schemaLookupJob?.cancel()
++        schemaLookupJob = lifecycleScope.launch {
++            val schemas = try {
++                withContext(Dispatchers.IO) {
++                    app.getExternalFilesDir(null)?.resolve("data/rime/build")
++                        ?.let(::RimeSchemaResolver)?.listMenuSchemas().orEmpty()
++                }
++            } catch (e: CancellationException) {
++                throw e
++            } catch (_: Exception) {
++                emptyList()
++            }
++            if (isAdded && generation == schemaLookupGeneration) {
++                installedSchemas = schemas
++                rebuildPreferences()
++            }
++        }
+     }
+ 
+     private fun rebuildPreferences() {
+@@ -84,13 +130,55 @@ class FontSettingsFragment : PaddingPreferenceFragment() {
+                 addPreference(R.string.font_remove) { showRemoveFont() }
+                 getPreference(1).isEnabled = fonts.isNotEmpty() && !importing
+             }
++            val schemaLabel = schemaLabel(schemaChoices().first { it.id == selectedSchemaId })
++            addCategory(R.string.font_schema_settings) {
++                addPreference(Preference(ctx).apply {
++                    setSummary(R.string.font_schema_hint)
++                    isSelectable = false
++                    isIconSpaceReserved = false
++                })
++                addPreference(getString(R.string.font_schema_choose), schemaLabel) { showSchemaPicker() }
++                addPreference(R.string.font_schema_reset, R.string.font_schema_reset_hint) {
++                    AlertDialog.Builder(ctx)
++                        .setTitle(R.string.font_schema_reset)
++                        .setMessage(getString(R.string.font_schema_reset_confirm, schemaLabel))
++                        .setPositiveButton(R.string.reset) { _, _ ->
++                            update { FontManager.clearSchemaSelections(selectedSchemaId) }
++                        }
++                        .setNegativeButton(android.R.string.cancel, null)
++                        .show()
++                }
++            }
++            FontConfigCodec.SCHEMA_ROLES.forEach { role ->
++                val schemaId = selectedSchemaId
++                val selection = FontManager.getSchemaSelection(schemaId, role)
++                addCategory(getString(R.string.font_schema_role, getString(titleFor(role)), schemaLabel)) {
++                    addPreference(
++                        getString(R.string.font_choose),
++                        selection.fontIds.mapNotNull { fonts[it]?.name }.joinToString(" → ")
++                            .ifEmpty { defaultLabelFor(role, schemaId) }
++                    ) { showFontPicker(role, schemaId) }
++                    if (selection.fontIds.size > 1) {
++                        addPreference(R.string.font_order, R.string.font_order_hint) {
++                            showFontOrder(role, schemaId)
++                        }
++                    }
++                    addPreference(
++                        getString(R.string.font_size),
++                        selection.sizeSp?.let {
++                            getString(R.string.font_size_value, NumberFormat.getNumberInstance().format(it))
++                        } ?: getString(R.string.font_inherit_role, getString(titleFor(role)))
++                    ) { showFontSize(role, schemaId) }
++                    addPreference(FontPreviewPreference(ctx, role, schemaId))
++                }
++            }
+             FontRole.entries.forEach { role ->
+                 val selection = FontManager.getSelection(role)
+                 addCategory(titleFor(role)) {
+                     addPreference(
+                         getString(R.string.font_choose),
+                         selection.fontIds.mapNotNull { fonts[it]?.name }.joinToString(" → ")
+-                            .ifEmpty { getString(defaultLabelFor(role)) }
++                            .ifEmpty { defaultLabelFor(role) }
+                     ) { showFontPicker(role) }
+                     if (selection.fontIds.size > 1) {
+                         addPreference(R.string.font_order, R.string.font_order_hint) {
+@@ -105,7 +193,7 @@ class FontSettingsFragment : PaddingPreferenceFragment() {
+                             } ?: getString(R.string.font_original_size)
+                         ) { showFontSize(role) }
+                     }
+-                    addPreference(FontPreviewPreference(ctx, role))
++                    addPreference(FontPreviewPreference(ctx, role, null))
+                 }
+             }
+             addPreference(R.string.font_reset, R.string.font_reset_hint) {
+@@ -130,14 +218,91 @@ class FontSettingsFragment : PaddingPreferenceFragment() {
+         FontRole.Preedit -> R.string.font_preedit
+     }
+ 
+-    private fun defaultLabelFor(role: FontRole) = if (role == FontRole.Global) {
+-        R.string.font_system_default
+-    } else R.string.font_inherit_global
++    private fun schemaChoices(): List<RimeSchema> {
++        val schemas = linkedMapOf(
++            "wubi06" to RimeSchema("wubi06", getString(R.string.font_schema_wubi06)),
++            "wubi86" to RimeSchema("wubi86", getString(R.string.font_schema_wubi86)),
++            "wubi98" to RimeSchema("wubi98", getString(R.string.font_schema_wubi98)),
++            "rime_ice" to RimeSchema("rime_ice", getString(R.string.font_schema_ice))
++        )
++        installedSchemas.forEach { schemas[it.id] = it }
++        FontManager.listConfiguredSchemas().sorted().forEach { id ->
++            schemas.putIfAbsent(id, RimeSchema(id, id))
++        }
++        schemas.putIfAbsent(selectedSchemaId, RimeSchema(selectedSchemaId, selectedSchemaId))
++        return schemas.values.toList()
++    }
++
++    private fun schemaLabel(schema: RimeSchema): String = if (schema.name == schema.id) {
++        schema.id
++    } else getString(R.string.font_schema_name_id, schema.name, schema.id)
++
++    private fun showSchemaPicker() {
++        val schemas = schemaChoices()
++        AlertDialog.Builder(requireContext())
++            .setTitle(R.string.font_schema_choose)
++            .setSingleChoiceItems(
++                schemas.map(::schemaLabel).toTypedArray(), schemas.indexOfFirst { it.id == selectedSchemaId }
++            ) { dialog, index ->
++                selectedSchemaId = schemas[index].id
++                dialog.dismiss()
++                rebuildPreferences()
++            }
++            .setNeutralButton(R.string.font_schema_other) { _, _ -> showSchemaIdInput() }
++            .setNegativeButton(android.R.string.cancel, null)
++            .show()
++    }
++
++    private fun showSchemaIdInput() {
++        val ctx = requireContext()
++        val input = EditText(ctx).apply {
++            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
++            filters = arrayOf(InputFilter.LengthFilter(128))
++            hint = getString(R.string.font_schema_id_hint)
++            setText(selectedSchemaId)
++            selectAll()
++        }
++        val dialog = AlertDialog.Builder(ctx)
++            .setTitle(R.string.font_schema_other)
++            .setMessage(R.string.font_schema_id_help)
++            .setView(input)
++            .setPositiveButton(android.R.string.ok, null)
++            .setNegativeButton(android.R.string.cancel, null)
++            .create()
++        dialog.setOnShowListener {
++            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
++                val id = input.text.toString().trim()
++                if (!FontConfigCodec.isValidSchemaId(id)) {
++                    input.error = getString(R.string.font_schema_id_invalid)
++                } else {
++                    selectedSchemaId = id
++                    dialog.dismiss()
++                    rebuildPreferences()
++                }
++            }
++        }
++        dialog.show()
++    }
++
++    private fun defaultLabelFor(role: FontRole, schemaId: String? = null): String = when {
++        schemaId != null -> getString(R.string.font_inherit_role, getString(titleFor(role)))
++        role == FontRole.Global -> getString(R.string.font_system_default)
++        else -> getString(R.string.font_inherit_global)
++    }
++
++    private fun selectionFor(role: FontRole, schemaId: String?) = if (schemaId == null) {
++        FontManager.getSelection(role)
++    } else FontManager.getSchemaSelection(schemaId, role)
+ 
+-    private fun showFontPicker(role: FontRole) {
++    private fun setSelection(role: FontRole, schemaId: String?, selection: FontSelection) {
++        if (schemaId == null) FontManager.setSelection(role, selection)
++        else FontManager.setSchemaSelection(schemaId, role, selection)
++    }
++
++    private fun showFontPicker(role: FontRole, schemaId: String? = null) {
+         val ctx = requireContext()
+         val fonts = FontManager.listFonts()
+-        val selected = FontManager.getSelection(role).fontIds.toMutableList()
++        val selected = selectionFor(role, schemaId).fontIds.toMutableList()
+         val builder = AlertDialog.Builder(ctx).setTitle(titleFor(role))
+         if (fonts.isEmpty()) {
+             builder.setMessage(R.string.font_no_imports)
+@@ -153,51 +318,52 @@ class FontSettingsFragment : PaddingPreferenceFragment() {
+                 } else if (checked) selected.add(fonts[index].id) else selected.remove(fonts[index].id)
+             }.setPositiveButton(android.R.string.ok) { _, _ ->
+                 update {
+-                    FontManager.setSelection(role, FontManager.getSelection(role).copy(fontIds = selected))
++                    setSelection(role, schemaId, selectionFor(role, schemaId).copy(fontIds = selected))
+                 }
+             }
+         }
+-        builder.setNeutralButton(defaultLabelFor(role)) { _, _ ->
++        builder.setNeutralButton(defaultLabelFor(role, schemaId)) { _, _ ->
+             update {
+-                FontManager.setSelection(role, FontManager.getSelection(role).copy(fontIds = emptyList()))
++                setSelection(role, schemaId, selectionFor(role, schemaId).copy(fontIds = emptyList()))
+             }
+         }.setNegativeButton(android.R.string.cancel, null).show()
+     }
+ 
+-    private fun showFontOrder(role: FontRole) {
+-        val ids = FontManager.getSelection(role).fontIds
++    private fun showFontOrder(role: FontRole, schemaId: String? = null) {
++        val ids = selectionFor(role, schemaId).fontIds
+         val names = FontManager.listFonts().associate { it.id to it.name }
+         if (ids.size < 2) return
+         AlertDialog.Builder(requireContext())
+             .setTitle(R.string.font_order)
+             .setItems(ids.mapIndexed { i, id -> "${i + 1}. ${names[id].orEmpty()}" }.toTypedArray()) { _, index ->
+                 if (index == 0) {
+-                    showFontOrder(role)
++                    showFontOrder(role, schemaId)
+                 } else update {
+                     val reordered = ids.toMutableList().apply { add(0, removeAt(index)) }
+-                    FontManager.setSelection(role, FontManager.getSelection(role).copy(fontIds = reordered))
++                    setSelection(role, schemaId, selectionFor(role, schemaId).copy(fontIds = reordered))
+                 }
+             }
+             .setNegativeButton(android.R.string.cancel, null)
+             .show()
+     }
+ 
+-    private fun showFontSize(role: FontRole) {
++    private fun showFontSize(role: FontRole, schemaId: String? = null) {
+         val ctx = requireContext()
+         val input = EditText(ctx).apply {
+             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+             filters = arrayOf(InputFilter.LengthFilter(8))
+             hint = getString(R.string.font_size_hint)
+-            setText(FontManager.getSelection(role).sizeSp?.toString().orEmpty())
++            setText(selectionFor(role, schemaId).sizeSp?.toString().orEmpty())
+             selectAll()
+         }
+         val dialog = AlertDialog.Builder(ctx)
+             .setTitle(getString(R.string.font_size_for, getString(titleFor(role))))
+             .setView(input)
+             .setPositiveButton(android.R.string.ok, null)
+-            .setNeutralButton(R.string.font_original_size) { _, _ ->
++            .setNeutralButton(if (schemaId == null) getString(R.string.font_original_size)
++                else getString(R.string.font_inherit_role, getString(titleFor(role)))) { _, _ ->
+                 update {
+-                    FontManager.setSelection(role, FontManager.getSelection(role).copy(sizeSp = null))
++                    setSelection(role, schemaId, selectionFor(role, schemaId).copy(sizeSp = null))
+                 }
+             }
+             .setNegativeButton(android.R.string.cancel, null)
+@@ -209,7 +375,7 @@ class FontSettingsFragment : PaddingPreferenceFragment() {
+                     input.error = getString(R.string.font_size_hint)
+                 } else {
+                     update {
+-                        FontManager.setSelection(role, FontManager.getSelection(role).copy(sizeSp = size))
++                        setSelection(role, schemaId, selectionFor(role, schemaId).copy(sizeSp = size))
+                     }
+                     dialog.dismiss()
+                 }
+@@ -245,7 +411,9 @@ class FontSettingsFragment : PaddingPreferenceFragment() {
+         }
+     }
+ 
+-    private class FontPreviewPreference(ctx: Context, private val role: FontRole) : Preference(ctx) {
++    private class FontPreviewPreference(
++        ctx: Context, private val role: FontRole, private val schemaId: String?
++    ) : Preference(ctx) {
+         init {
+             setTitle(R.string.font_preview_text)
+             isSelectable = false
+@@ -259,8 +427,12 @@ class FontSettingsFragment : PaddingPreferenceFragment() {
+                 // Reset recycled holders before applying this role's optional overrides.
+                 view.typeface = android.graphics.Typeface.DEFAULT
+                 view.textSize = 20f
+-                FontManager.applyTo(view, role)
++                FontManager.applyTo(view, role, schemaId)
+             }
+         }
+     }
++
++    private companion object {
++        const val SELECTED_SCHEMA = "font_selected_rime_schema"
++    }
+ }
+diff --git a/app/src/main/res/values-zh-rCN/strings_fonts.xml b/app/src/main/res/values-zh-rCN/strings_fonts.xml
+index dd53cc33896418cad741d28cdb43be306c87898f..e2be8d47b412a52e836b851013af747f0fe53fb5 100644
+--- a/app/src/main/res/values-zh-rCN/strings_fonts.xml
++++ b/app/src/main/res/values-zh-rCN/strings_fonts.xml
+@@ -2,7 +2,7 @@
+ <resources>
+     <string name="font_settings">字体</string>
+     <string name="font_settings_summary">选择键盘文字的字体和大小</string>
+-    <string name="font_local_only">从设备中选择字体文件。设置将在下次打开键盘时生效。</string>
++    <string name="font_local_only">从设备中选择字体文件。切换 Rime 方案时自动应用该方案的字体设置。</string>
+     <string name="font_fallback_hint">可选择多个字体，按顺序补全缺失的字符。字体集合使用第一个字型。未设置的项目使用全局字体。</string>
+     <string name="font_fallback_legacy_hint">Android 6–9 仅使用列表中第一个可用的字体。字体集合使用第一个字型。未设置的项目使用全局字体。</string>
+     <string name="font_library">字体文件</string>
+@@ -34,4 +34,21 @@
+     <string name="font_reset">重置字体设置</string>
+     <string name="font_reset_hint">恢复原始字体和大小，保留已导入的文件</string>
+     <string name="font_reset_confirm">恢复所有键盘文字的原始字体和大小？</string>
++    <string name="font_schema_settings">按 Rime 方案设置字体</string>
++    <string name="font_schema_hint">选择方案后，分别设置候选词、弹出按键和预编辑文字。未设置的项目沿用对应区域的通用字体和大小。</string>
++    <string name="font_schema_choose">Rime 方案</string>
++    <string name="font_schema_reset">清除此方案的专用设置</string>
++    <string name="font_schema_reset_hint">此方案恢复使用通用字体和大小</string>
++    <string name="font_schema_reset_confirm">让“%1$s”恢复使用对应区域的通用字体和大小？</string>
++    <string name="font_schema_role">%1$s · %2$s</string>
++    <string name="font_schema_name_id">%1$s（%2$s）</string>
++    <string name="font_schema_other">其他方案 ID…</string>
++    <string name="font_schema_id_hint">例如：wubi06</string>
++    <string name="font_schema_id_help">如需设置列表之外的方案，请填写方案 YAML 文件中的 schema_id。</string>
++    <string name="font_schema_id_invalid">请输入 1–128 个字母、数字、点、下划线或连字符，并以字母或数字开头。</string>
++    <string name="font_inherit_role">沿用%1$s通用设置</string>
++    <string name="font_schema_wubi06">新世纪五笔</string>
++    <string name="font_schema_wubi86">五笔86</string>
++    <string name="font_schema_wubi98">五笔98</string>
++    <string name="font_schema_ice">雾凇拼音</string>
+ </resources>
+diff --git a/app/src/main/res/values-zh-rTW/strings_fonts.xml b/app/src/main/res/values-zh-rTW/strings_fonts.xml
+index f7be771aa3f44155deb9421c59ee6434e483db03..22283bd3625ce9c1a56add5deb9aeedeeb326ad1 100644
+--- a/app/src/main/res/values-zh-rTW/strings_fonts.xml
++++ b/app/src/main/res/values-zh-rTW/strings_fonts.xml
+@@ -2,7 +2,7 @@
+ <resources>
+     <string name="font_settings">字型</string>
+     <string name="font_settings_summary">選擇鍵盤文字的字型和大小</string>
+-    <string name="font_local_only">從裝置中選擇字型檔案。設定將在下次開啟鍵盤時生效。</string>
++    <string name="font_local_only">從裝置中選擇字型檔案。切換 Rime 方案時自動套用該方案的字型設定。</string>
+     <string name="font_fallback_hint">可選擇多個字型，依序補齊缺少的字元。字型集合使用第一個字型。未設定的項目使用全域字型。</string>
+     <string name="font_fallback_legacy_hint">Android 6–9 僅使用清單中第一個可用的字型。字型集合使用第一個字型。未設定的項目使用全域字型。</string>
+     <string name="font_library">字型檔案</string>
+@@ -34,4 +34,21 @@
+     <string name="font_reset">重設字型設定</string>
+     <string name="font_reset_hint">還原原始字型和大小，保留已匯入的檔案</string>
+     <string name="font_reset_confirm">還原所有鍵盤文字的原始字型和大小？</string>
++    <string name="font_schema_settings">依 Rime 方案設定字型</string>
++    <string name="font_schema_hint">選擇方案後，分別設定候選詞、彈出按鍵和預編輯文字。未設定的項目沿用對應區域的通用字型和大小。</string>
++    <string name="font_schema_choose">Rime 方案</string>
++    <string name="font_schema_reset">清除此方案的專用設定</string>
++    <string name="font_schema_reset_hint">此方案恢復使用通用字型和大小</string>
++    <string name="font_schema_reset_confirm">讓「%1$s」恢復使用對應區域的通用字型和大小？</string>
++    <string name="font_schema_role">%1$s · %2$s</string>
++    <string name="font_schema_name_id">%1$s（%2$s）</string>
++    <string name="font_schema_other">其他方案 ID…</string>
++    <string name="font_schema_id_hint">例如：wubi06</string>
++    <string name="font_schema_id_help">如需設定清單之外的方案，請填寫方案 YAML 檔案中的 schema_id。</string>
++    <string name="font_schema_id_invalid">請輸入 1–128 個字母、數字、點、底線或連字號，並以字母或數字開頭。</string>
++    <string name="font_inherit_role">沿用%1$s通用設定</string>
++    <string name="font_schema_wubi06">新世紀五筆</string>
++    <string name="font_schema_wubi86">五筆86</string>
++    <string name="font_schema_wubi98">五筆98</string>
++    <string name="font_schema_ice">霧凇拼音</string>
+ </resources>
+diff --git a/app/src/main/res/values/strings_fonts.xml b/app/src/main/res/values/strings_fonts.xml
+index 49fce375493e77c30dba7479e3a51610dbc951e2..b83fa7b77f4aef987d2fc656a993393a7d7446f8 100644
+--- a/app/src/main/res/values/strings_fonts.xml
++++ b/app/src/main/res/values/strings_fonts.xml
+@@ -2,7 +2,7 @@
+ <resources>
+     <string name="font_settings">Fonts</string>
+     <string name="font_settings_summary">Choose fonts and sizes for keyboard text</string>
+-    <string name="font_local_only">Choose font files from your device. Changes apply the next time the keyboard opens.</string>
++    <string name="font_local_only">Choose font files from your device. Schema choices apply as you switch Rime schemas.</string>
+     <string name="font_fallback_hint">Choose multiple fonts to fill missing characters in fallback order. Collection fonts use their first face. Unset choices inherit the global font.</string>
+     <string name="font_fallback_legacy_hint">On Android 6–9, only the first usable font in each list is used. Collection fonts use their first face. Unset choices inherit the global font.</string>
+     <string name="font_library">Font files</string>
+@@ -34,4 +34,21 @@
+     <string name="font_reset">Reset font settings</string>
+     <string name="font_reset_hint">Restore original fonts and sizes; keep imported files</string>
+     <string name="font_reset_confirm">Restore the original fonts and sizes for all keyboard text?</string>
++    <string name="font_schema_settings">Fonts by Rime schema</string>
++    <string name="font_schema_hint">Choose a schema, then set its candidates, popup keys and preedit separately. Unset choices inherit the normal settings for that text area.</string>
++    <string name="font_schema_choose">Rime schema</string>
++    <string name="font_schema_reset">Clear this schema’s overrides</string>
++    <string name="font_schema_reset_hint">Use the normal fonts and sizes for this schema</string>
++    <string name="font_schema_reset_confirm">Restore the normal font and size choices for %1$s?</string>
++    <string name="font_schema_role">%1$s · %2$s</string>
++    <string name="font_schema_name_id">%1$s (%2$s)</string>
++    <string name="font_schema_other">Other schema ID…</string>
++    <string name="font_schema_id_hint">For example: wubi06</string>
++    <string name="font_schema_id_help">For a schema that is not listed, enter its schema_id from the schema YAML file.</string>
++    <string name="font_schema_id_invalid">Use 1–128 letters, digits, dots, underscores or hyphens, starting with a letter or digit.</string>
++    <string name="font_inherit_role">%1$s default</string>
++    <string name="font_schema_wubi06">Wubi06</string>
++    <string name="font_schema_wubi86">Wubi86</string>
++    <string name="font_schema_wubi98">Wubi98</string>
++    <string name="font_schema_ice">Rime Ice</string>
+ </resources>
+diff --git a/app/src/test/java/org/fcitx/fcitx5/android/data/font/FontConfigTest.kt b/app/src/test/java/org/fcitx/fcitx5/android/data/font/FontConfigTest.kt
+index a5d8c8ce5f2d6f5823b5168f295526ba478e1769..aa74ccdf05262aefeca54f4192116c5a1bcf08c2 100644
+--- a/app/src/test/java/org/fcitx/fcitx5/android/data/font/FontConfigTest.kt
++++ b/app/src/test/java/org/fcitx/fcitx5/android/data/font/FontConfigTest.kt
+@@ -65,4 +65,127 @@ class FontConfigTest {
+         )))
+         assertEquals(fonts.take(8).map { it.id }, decoded.selections[FontRole.Candidate]?.fontIds)
+     }
++
++    @Test
++    fun `schema choices preserve independent roles and old version one choices`() {
++        val other = "abcdef0123456789abcdef0123456789"
++        val expected = FontConfig(
++            fonts = listOf(ImportedFont(id, "HeiTi.ttf"), ImportedFont(other, "NVSans.ttf")),
++            selections = mapOf(FontRole.Global to FontSelection(listOf(other))),
++            schemaSelections = mapOf(
++                "wubi06" to mapOf(
++                    FontRole.Candidate to FontSelection(listOf(id), 22f),
++                    FontRole.Popup to FontSelection(listOf(id, other)),
++                    FontRole.Preedit to FontSelection(sizeSp = 16f)
++                ),
++                "wubi86" to mapOf(FontRole.Candidate to FontSelection(listOf(other))),
++                "wubi98" to mapOf(FontRole.Candidate to FontSelection(listOf(other)))
++            )
++        )
++        val encoded = FontConfigCodec.encode(expected)
++        assertTrue(encoded.contains("\"version\":1"))
++        assertEquals(expected, FontConfigCodec.decode(encoded))
++        val old = FontConfigCodec.decode("""{"version":1,"fonts":[{"id":"$id","name":"old.ttf"}],
++            "selections":{"Candidate":{"fontIds":["$id"],"sizeSp":18}}}""")
++        assertTrue(old.schemaSelections.isEmpty())
++        assertEquals(FontSelection(listOf(id), 18f), old.selections[FontRole.Candidate])
++    }
++
++    @Test
++    fun `schema settings reject paths oversized identifiers and keyboard roles`() {
++        val decoded = FontConfigCodec.decode("""{
++            "version":1,"fonts":[{"id":"$id","name":"font.ttf"}],
++            "schemaSelections":{
++                "../wubi06":{"Candidate":{"fontIds":["$id"]}},
++                "/wubi06":{"Candidate":{"fontIds":["$id"]}},
++                "${"a".repeat(129)}":{"Candidate":{"fontIds":["$id"]}},
++                "wubi06":{
++                    "Global":{"fontIds":["$id"]},
++                    "KeyMain":{"fontIds":["$id"]},
++                    "KeyAlt":{"fontIds":["$id"]},
++                    "Candidate":{"fontIds":["missing","$id","$id"],"sizeSp":20},
++                    "Popup":{"fontIds":["missing"],"sizeSp":100},
++                    "Preedit":{"sizeSp":16}
++                }
++            }
++        }""")
++        assertEquals(setOf("wubi06"), decoded.schemaSelections.keys)
++        assertEquals(mapOf(
++            FontRole.Candidate to FontSelection(listOf(id), 20f),
++            FontRole.Preedit to FontSelection(sizeSp = 16f)
++        ), decoded.schemaSelections["wubi06"])
++        listOf("", ".", "..", "_private", "a/b", "a\\b", "a\nb", "字", "a".repeat(129)).forEach {
++            assertFalse(it, FontConfigCodec.isValidSchemaId(it))
++        }
++        listOf("wubi06", "double_pinyin-flypy", "my.schema", "9schema", "a".repeat(128)).forEach {
++            assertTrue(it, FontConfigCodec.isValidSchemaId(it))
++        }
++    }
++
++    @Test
++    fun `font and size inherit separately without changing keyboard label choices`() {
++        val other = "abcdef0123456789abcdef0123456789"
++        val global = FontSelection(listOf(other), 48f)
++        val candidate = FontSelection(listOf(id), 18f)
++        val scoped = FontSelection(sizeSp = 23f)
++        val config = FontConfig(
++            selections = mapOf(FontRole.Global to global, FontRole.Candidate to candidate),
++            schemaSelections = mapOf("wubi06" to mapOf(
++                FontRole.Candidate to scoped,
++                FontRole.Preedit to FontSelection(listOf(id)),
++                // Even malformed in-memory settings cannot affect ordinary key labels.
++                FontRole.KeyMain to FontSelection(listOf(id), 30f)
++            ))
++        )
++        assertEquals(listOf(scoped, candidate, global), config.fontLayers(FontRole.Candidate, "wubi06"))
++        assertEquals(23f, config.roleSize(FontRole.Candidate, "wubi06"))
++        assertEquals(listOf(candidate, global), config.fontLayers(FontRole.Candidate, "wubi98"))
++        assertEquals(18f, config.roleSize(FontRole.Candidate, null))
++        assertEquals(listOf(global), config.fontLayers(FontRole.KeyMain, "wubi06"))
++        assertEquals(null, config.roleSize(FontRole.KeyMain, "wubi06"))
++        assertEquals(null, config.roleSize(FontRole.Preedit, "wubi06"))
++        assertEquals(null, config.roleSize(FontRole.Popup, "wubi06"))
++    }
++
++    @Test
++    fun `deleting an imported font clears all schema references and keeps remaining sizes`() {
++        val other = "abcdef0123456789abcdef0123456789"
++        val config = FontConfig(
++            fonts = listOf(ImportedFont(id, "HeiTi.ttf"), ImportedFont(other, "NVSans.ttf")),
++            selections = mapOf(FontRole.Candidate to FontSelection(listOf(id, other), 18f)),
++            schemaSelections = mapOf(
++                "wubi06" to mapOf(FontRole.Candidate to FontSelection(listOf(id), 20f)),
++                "wubi86" to mapOf(FontRole.Popup to FontSelection(listOf(id))),
++                "wubi98" to mapOf(FontRole.Preedit to FontSelection(listOf(id, other)))
++            )
++        ).withoutFont(id)
++        assertEquals(listOf(ImportedFont(other, "NVSans.ttf")), config.fonts)
++        assertEquals(FontSelection(listOf(other), 18f), config.selections[FontRole.Candidate])
++        assertEquals(FontSelection(sizeSp = 20f), config.schemaSelections["wubi06"]?.get(FontRole.Candidate))
++        assertFalse(config.schemaSelections.containsKey("wubi86"))
++        assertEquals(FontSelection(listOf(other)), config.schemaSelections["wubi98"]?.get(FontRole.Preedit))
++        assertEquals(config, FontConfigCodec.decode(FontConfigCodec.encode(config)))
++    }
++
++    @Test
++    fun `schema and fallback limits apply to restored settings`() {
++        val fonts = (0 until 10).map { ImportedFont(it.toString(16).padStart(32, '0'), "font$it.ttf") }
++        val decoded = FontConfigCodec.decode(FontConfigCodec.encode(FontConfig(
++            fonts = fonts,
++            schemaSelections = (0 until FontConfigCodec.MAX_SCHEMAS + 2).associate {
++                "schema$it" to mapOf(FontRole.Popup to FontSelection(fonts.map { it.id }))
++            }
++        )))
++        assertEquals(FontConfigCodec.MAX_SCHEMAS, decoded.schemaSelections.size)
++        assertTrue(decoded.schemaSelections.values.all {
++            it[FontRole.Popup]?.fontIds == fonts.take(FontConfigCodec.MAX_FALLBACKS).map { font -> font.id }
++        })
++    }
++
++    @Test
++    fun `configuration byte limit also applies to multibyte restored text`() {
++        val raw = """{"version":1,"ignored":"${"汉".repeat(FontConfigCodec.MAX_CONFIG_BYTES / 2)}"}"""
++        assertTrue(raw.length < FontConfigCodec.MAX_CONFIG_BYTES)
++        assertEquals(FontConfig(), FontConfigCodec.decode(raw))
++    }
+ }
+diff --git a/app/src/test/java/org/fcitx/fcitx5/android/data/rime/RimeSchemaResolverTest.kt b/app/src/test/java/org/fcitx/fcitx5/android/data/rime/RimeSchemaResolverTest.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..6597718a67ea184e417475538651b41a652186ae
+--- /dev/null
++++ b/app/src/test/java/org/fcitx/fcitx5/android/data/rime/RimeSchemaResolverTest.kt
+@@ -0,0 +1,129 @@
++/*
++ * SPDX-License-Identifier: LGPL-2.1-or-later
++ */
++package org.fcitx.fcitx5.android.data.rime
++
++import java.io.File
++import java.nio.file.Files
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertNull
++import org.junit.Assert.assertTrue
++import org.junit.Rule
++import org.junit.Test
++import org.junit.rules.TemporaryFolder
++
++class RimeSchemaResolverTest {
++    @get:Rule val temp = TemporaryFolder()
++
++    private fun schema(directory: File, id: String, name: String, fileName: String = "$id.schema.yaml") =
++        File(directory, fileName).apply {
++            writeText("schema:\n  schema_id: $id\n  name: $name\n")
++        }
++
++    @Test
++    fun `stable IDs resolve renamed generic schemas and menu order excludes auxiliary schemas`() {
++        val directory = temp.newFolder()
++        schema(directory, "wubi06", "新世纪五笔")
++        schema(directory, "wubi98", "五笔98")
++        schema(directory, "rime_ice", "雾凇拼音")
++        schema(directory, "my.double-pinyin", "'My custom # Pinyin'")
++        schema(directory, "pinyin_aux", "拼音反查辅助")
++        File(directory, "default.yaml").writeText("""
++            schema_list:
++              - schema: wubi98
++              - schema: wubi06
++              - schema: my.double-pinyin
++              - schema: rime_ice
++            switcher:
++              caption: 方案
++        """.trimIndent())
++        val resolver = RimeSchemaResolver(directory)
++        assertEquals(RimeSchema("my.double-pinyin", "My custom # Pinyin"), resolver.resolve("My custom # Pinyin"))
++        assertEquals(listOf("wubi98", "wubi06", "my.double-pinyin", "rime_ice"),
++            resolver.listMenuSchemas().map { it.id })
++        assertEquals(5, resolver.listSchemas().size)
++        schema(directory, "wubi06", "\"Renamed \\u4E94\\u7B14\"")
++        assertEquals(RimeSchema("wubi06", "Renamed 五笔"), resolver.resolve("Renamed 五笔"))
++        assertNull(resolver.resolve("新世纪五笔"))
++    }
++
++    @Test
++    fun `duplicate captions and noncanonical aliases cannot select a font scope`() {
++        val directory = temp.newFolder()
++        schema(directory, "one", "Same")
++        val other = schema(directory, "two", "Same")
++        val resolver = RimeSchemaResolver(directory)
++        assertNull(resolver.resolve("Same"))
++        assertTrue(resolver.listSchemas().isEmpty())
++        other.delete()
++        assertEquals("one", resolver.resolve("Same")?.id)
++        schema(directory, "one", "Same", "alias.schema.yaml")
++        assertNull(resolver.resolve("Same"))
++        assertTrue(resolver.listSchemas().isEmpty())
++        schema(directory, "custom", "Alias only", "other.schema.yaml")
++        assertNull(resolver.resolve("Alias only"))
++    }
++
++    @Test
++    fun `missing unsupported or unsafe menu data falls back to canonical deployed metadata`() {
++        val directory = temp.newFolder()
++        schema(directory, "one", "One")
++        schema(directory, "two", "Two")
++        val resolver = RimeSchemaResolver(directory)
++        assertEquals(listOf("one", "two"), resolver.listMenuSchemas().map { it.id })
++        val menu = File(directory, "default.yaml")
++        for (text in listOf("schema_list: [one, two]", "schema_list:\n  - schema: ../one\n")) {
++            menu.writeText(text)
++            assertEquals(listOf("one", "two"), resolver.listMenuSchemas().map { it.id })
++        }
++        menu.writeBytes(byteArrayOf(0xc3.toByte(), 0x28))
++        assertEquals(2, resolver.listMenuSchemas().size)
++        menu.delete()
++        val outside = temp.newFile().apply { writeText("schema_list:\n  - schema: two\n") }
++        Files.createSymbolicLink(menu.toPath(), outside.toPath())
++        assertEquals(listOf("one", "two"), resolver.listMenuSchemas().map { it.id })
++        menu.delete()
++        menu.writeText("schema_list: []\n")
++        assertTrue(resolver.listMenuSchemas().isEmpty())
++    }
++
++    @Test
++    fun `malformed metadata unsafe IDs and schema symlinks fail closed`() {
++        val directory = temp.newFolder()
++        val target = schema(directory, "one", "One")
++        val resolver = RimeSchemaResolver(directory)
++        for (text in listOf(
++            "schema:\n  schema_id: ../one\n  name: One\n",
++            "schema:\n  schema_id: one\n  name: *alias\n",
++            "schema:\n  schema_id: one\n  schema_id: other\n  name: One\n"
++        )) {
++            target.writeText(text)
++            assertNull(resolver.resolve("One"))
++            assertTrue(resolver.listSchemas().isEmpty())
++        }
++        target.writeBytes(byteArrayOf(0xc3.toByte(), 0x28))
++        assertNull(resolver.resolve("One"))
++        target.delete()
++        val outside = temp.newFile().apply { writeText("schema:\n  schema_id: one\n  name: One\n") }
++        Files.createSymbolicLink(target.toPath(), outside.toPath())
++        assertNull(resolver.resolve("One"))
++        assertTrue(resolver.listSchemas().isEmpty())
++    }
++
++    @Test
++    fun `schema count file size and total size limits are enforced`() {
++        val directory = temp.newFolder()
++        val resolver = RimeSchemaResolver(directory)
++        val target = schema(directory, "one", "One")
++        target.appendText("#".repeat(128 * 1024))
++        assertNull(resolver.resolve("One"))
++        target.delete()
++        repeat(65) { schema(directory, "id$it", "Name$it") }
++        assertTrue(resolver.listSchemas().isEmpty())
++        directory.listFiles()!!.forEach(File::delete)
++        repeat(17) {
++            schema(directory, "id$it", "Name$it").appendText("#".repeat(125 * 1024))
++        }
++        assertTrue(resolver.listSchemas().isEmpty())
++    }
++}

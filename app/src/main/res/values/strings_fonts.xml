@@ -2,7 +2,7 @@
 <resources>
     <string name="font_settings">Fonts</string>
     <string name="font_settings_summary">Choose fonts and sizes for keyboard text</string>
-    <string name="font_local_only">Choose font files from your device. Changes apply the next time the keyboard opens.</string>
+    <string name="font_local_only">Choose font files from your device. Schema choices apply as you switch Rime schemas.</string>
     <string name="font_fallback_hint">Choose multiple fonts to fill missing characters in fallback order. Collection fonts use their first face. Unset choices inherit the global font.</string>
     <string name="font_fallback_legacy_hint">On Android 6–9, only the first usable font in each list is used. Collection fonts use their first face. Unset choices inherit the global font.</string>
     <string name="font_library">Font files</string>
@@ -34,4 +34,21 @@
     <string name="font_reset">Reset font settings</string>
     <string name="font_reset_hint">Restore original fonts and sizes; keep imported files</string>
     <string name="font_reset_confirm">Restore the original fonts and sizes for all keyboard text?</string>
+    <string name="font_schema_settings">Fonts by Rime schema</string>
+    <string name="font_schema_hint">Choose a schema, then set its candidates, popup keys and preedit separately. Unset choices inherit the normal settings for that text area.</string>
+    <string name="font_schema_choose">Rime schema</string>
+    <string name="font_schema_reset">Clear this schema’s overrides</string>
+    <string name="font_schema_reset_hint">Use the normal fonts and sizes for this schema</string>
+    <string name="font_schema_reset_confirm">Restore the normal font and size choices for %1$s?</string>
+    <string name="font_schema_role">%1$s · %2$s</string>
+    <string name="font_schema_name_id">%1$s (%2$s)</string>
+    <string name="font_schema_other">Other schema ID…</string>
+    <string name="font_schema_id_hint">For example: wubi06</string>
+    <string name="font_schema_id_help">For a schema that is not listed, enter its schema_id from the schema YAML file.</string>
+    <string name="font_schema_id_invalid">Use 1–128 letters, digits, dots, underscores or hyphens, starting with a letter or digit.</string>
+    <string name="font_inherit_role">%1$s default</string>
+    <string name="font_schema_wubi06">Wubi06</string>
+    <string name="font_schema_wubi86">Wubi86</string>
+    <string name="font_schema_wubi98">Wubi98</string>
+    <string name="font_schema_ice">Rime Ice</string>
 </resources>

@@ -41,16 +41,19 @@ import androidx.autofill.inline.v1.InlineSuggestionUi
 import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.core.CapabilityFlags
 import org.fcitx.fcitx5.android.core.FcitxAPI
 import org.fcitx.fcitx5.android.core.FcitxEvent
 import org.fcitx.fcitx5.android.core.FcitxKeyMapping
 import org.fcitx.fcitx5.android.core.FormattedText
+import org.fcitx.fcitx5.android.core.InputMethodEntry
 import org.fcitx.fcitx5.android.core.KeyStates
 import org.fcitx.fcitx5.android.core.KeySym
 import org.fcitx.fcitx5.android.core.ScancodeMapping
@@ -62,6 +65,7 @@ import org.fcitx.fcitx5.android.data.font.FontManager
 import org.fcitx.fcitx5.android.data.prefs.AppPrefs
 import org.fcitx.fcitx5.android.data.prefs.ManagedPreference
 import org.fcitx.fcitx5.android.data.prefs.ManagedPreferenceProvider
+import org.fcitx.fcitx5.android.data.rime.RimeSchemaResolver
 import org.fcitx.fcitx5.android.data.theme.Theme
 import org.fcitx.fcitx5.android.data.theme.ThemeManager
 import org.fcitx.fcitx5.android.input.cursor.CursorRange
@@ -103,6 +107,37 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
     private var inputView: InputView? = null
     private var candidatesView: CandidatesView? = null
     private var appliedFontRevision = -1L
+
+    private var fontSchemaKey: Pair<String, String>? = null
+    private var fontSchemaJob: Job? = null
+    private var fontSchemaGeneration = 0L
+    private var fontSchemaDisposed = false
+
+    /** Track schemas centrally so hardware candidates and cached popup views update too. */
+    private fun updateRimeFontSchema(ime: InputMethodEntry, force: Boolean = false) {
+        if (fontSchemaDisposed) return
+        val key = ime.uniqueName to ime.subMode.name
+        if (!force && key == fontSchemaKey) return
+        fontSchemaKey = key
+        val generation = ++fontSchemaGeneration
+        fontSchemaJob?.cancel()
+        fontSchemaJob = null
+        // Do not keep the previous schema's font during an unresolved/new lookup.
+        FontManager.setActiveRimeSchema(null)
+        if (ime.uniqueName != "rime" || ime.subMode.name.isBlank()) return
+        fontSchemaJob = lifecycleScope.launch {
+            val schemaId = withContext(Dispatchers.IO) {
+                // Storage can become available after unlock; never cache a failed lookup.
+                runCatching {
+                    getExternalFilesDir(null)?.resolve("data/rime/build")
+                        ?.let(::RimeSchemaResolver)?.resolve(ime.subMode.name)?.id
+                }.getOrNull()
+            }
+            if (!fontSchemaDisposed && generation == fontSchemaGeneration) {
+                FontManager.setActiveRimeSchema(schemaId)
+            }
+        }
+    }
 
     private val navbarMgr = NavigationBarManager()
     private val inputDeviceMgr = InputDeviceManager { isVirtualKeyboard ->
@@ -323,6 +358,7 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
                 handleDeleteSurrounding(before, after)
             }
             is FcitxEvent.IMChangeEvent -> {
+                updateRimeFontSchema(event.data)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                     val im = event.data.uniqueName
                     val subtype = SubtypeManager.subtypeOf(im) ?: return
@@ -333,6 +369,10 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
                 if (inputDeviceMgr.evaluateOnInputMethodActivate()) {
                     showStatusIcon(StatusIconMapping.fromEntry(event.data))
                 }
+            }
+            is FcitxEvent.StatusAreaEvent -> {
+                // Rime schema changes can arrive without an IMChangeEvent.
+                updateRimeFontSchema(event.data.im)
             }
             is FcitxEvent.SwitchInputMethodEvent -> {
                 val (reason) = event.data
@@ -738,6 +778,8 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
     }
 
     override fun onStartInput(attribute: EditorInfo, restarting: Boolean) {
+        // Re-read deployed metadata even if the caption is unchanged after Deploy.
+        updateRimeFontSchema(fcitx.runImmediately { inputMethodEntryCached }, force = true)
         refreshFontsIfNeeded()
         // update selection as soon as possible
         // sometimes when restarting input, onUpdateSelection happens before onStartInput, and
@@ -1100,6 +1142,11 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
     }
 
     override fun onDestroy() {
+        fontSchemaDisposed = true
+        ++fontSchemaGeneration
+        fontSchemaJob?.cancel()
+        fontSchemaJob = null
+        FontManager.setActiveRimeSchema(null)
         recreateInputViewPrefs.forEach {
             it.unregisterOnChangeListener(recreateInputViewListener)
         }

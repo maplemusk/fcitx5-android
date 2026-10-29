@@ -1,0 +1,93 @@
+Fcitx5 Android: fonts by Rime schema / 按 Rime 方案设置字体
+
+This update adds independent font lists and sizes for Candidates, Popup keys,
+and Preedit text in each Rime schema. Ordinary main/alternate keyboard labels
+keep their normal settings. Existing 2x Wubi root pictures remain unchanged.
+
+Windows: update and build the app
+
+1. Back up your current project and keep your release keystore/signing settings.
+2. Extract fcitx5-android-project-update-schema-fonts.zip into your project's
+   actual root (the folder containing gradlew.bat and settings.gradle.kts).
+   Merge folders and replace matching source files. This overlay is for the
+   font-choice/AGP 9.3 project developed in this conversation and includes the
+   subsequent Wubi picture-hint updates. It is not a complete source checkout.
+3. From that folder run:
+     .\gradlew.bat :app:assembleRelease
+4. Sign/install with the same certificate as your existing custom app. A different
+   certificate cannot update it in place. Keep your existing Rime plugin installed;
+   these font changes require rebuilding only the main app.
+
+Set up your requested fonts
+
+1. Copy your HeiTi.ttf and NVSans.ttf to the phone.
+2. Open Fcitx5 settings -> Virtual keyboard -> Fonts -> Import font.
+   Import both files. Font binaries are not included in this update.
+3. In Fonts by Rime schema -> Rime schema, choose wubi06. In its three categories
+   (Candidates, Popup keys, Preedit text), choose HeiTi.ttf separately.
+4. Choose wubi86 and set the same three categories to NVSans.ttf.
+5. Choose wubi98 and set the same three categories to NVSans.ttf.
+6. Leave sizes inherited, or choose a separate size for each area and schema.
+   Return to input and switch schemes from Rime's menu; the fonts follow it.
+
+Requested mapping, for all THREE areas:
+  wubi06  / 新世纪五笔  -> HeiTi.ttf
+  wubi86  / 五笔86      -> NVSans.ttf
+  wubi98  / 五笔98      -> NVSans.ttf
+
+Use the correct font for each decomposition map: matching filenames alone do
+not guarantee that a replacement font contains the required private-use glyphs.
+On Android 10+, multiple selected fonts form the chosen fallback order. On
+Android 6-9, only the first usable selected font is used.
+
+What the settings control
+
+- Candidate text, key-popup text, and Fcitx's own preedit text are independent.
+- Wubi root-hint pictures contain fixed pixels; a font choice does not redraw them.
+- Text inside the app you are typing into uses that app's font.
+- An unset font or size inherits the ordinary setting for that area. Fonts then
+  fall back to Global font; sizes retain the normal role/view size.
+- Clear this schema's overrides restores that schema's ordinary settings.
+- Reset font settings clears global and schema choices but keeps imported fonts.
+- Removing a font clears its selections in every schema; the original file stays.
+
+Custom Wubi06 data with your final Wubi86/98 package
+
+The separate wubi-and-ice-custom06-android.zip is ready to import. It uses your
+rime.zip's five Wubi06 dictionary/OpenCC resources byte-for-byte. Its authored
+Wubi06 compatibility profile retains schema_id wubi06 and name 新世纪五笔,
+independent 正拆/反拆 switches, raw half-width Enter, exact full-Pinyin mixing
+and the prediction model already present in wubi-and-ice-android3.zip.
+All other existing files in that final86/98 ZIP remain byte-for-byte unchanged.
+
+Keep a private export backup, then use Fcitx5 Advanced -> Import user data to
+import the prepared ZIP. Reopen Fcitx5, run Rime Deploy, and restart Fcitx5.
+The imported data does not select the new Android fonts; perform the settings
+steps above. See CUSTOM-WUBI06.txt in the starter kit to reproduce the merge.
+
+If schema fonts do not follow the menu
+
+Deploy the imported Rime files, restart Fcitx5, then check the schema IDs and
+your selections. The app resolves Rime's displayed caption from deployed
+data/rime/build/*.schema.yaml. Missing, unreadable or duplicate captions use
+the ordinary font settings. Give schemes distinct names and deploy again.
+
+验证 / Verification
+
+Main-app Kotlin/Java/resources compiled; 61 targeted font/schema/Wubi tests pass.
+The exact merged Rime ZIP deployed in librime 1.13.1 with Lua and librime-predict;
+custom06 codes, independent 正拆/反拆, half-width raw Enter, Pinyin mixing,
+prediction and Wubi86/98/Ice checks passed. Actual Android display/touch behavior
+has not been device-tested here. This delivery contains source, not a signed APK.
+
+中文快速步骤
+
+1. 将主程序源码更新ZIP解压合并到原项目根目录，保留已有签名文件和配置。
+   执行 .\gradlew.bat :app:assembleRelease，用原证书签名并安装主程序。
+2. 备份后，在Fcitx5“高级 -> 导入用户数据”导入独立的个人Rime ZIP。
+   重新打开app，执行Rime Deploy，再重启Fcitx5。Rime插件沿用已安装版本。
+3. 将HeiTi.ttf和NVSans.ttf复制到手机；“虚拟键盘 -> 字体 -> 导入字体”。
+4. “按Rime方案设置字体”选wubi06，把候选、按键弹出文字、预编辑三项分别
+   设为HeiTi；选wubi86和wubi98，把各自三项分别设为NVSans。
+5. 字号可分别调整，也可留空继承。切换Rime方案时自动切换这些区域的字体。
+   普通按键标签仍沿用原设置；字根图片内容不受字体选择影响。

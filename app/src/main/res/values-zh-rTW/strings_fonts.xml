@@ -2,7 +2,7 @@
 <resources>
     <string name="font_settings">字型</string>
     <string name="font_settings_summary">選擇鍵盤文字的字型和大小</string>
-    <string name="font_local_only">從裝置中選擇字型檔案。設定將在下次開啟鍵盤時生效。</string>
+    <string name="font_local_only">從裝置中選擇字型檔案。切換 Rime 方案時自動套用該方案的字型設定。</string>
     <string name="font_fallback_hint">可選擇多個字型，依序補齊缺少的字元。字型集合使用第一個字型。未設定的項目使用全域字型。</string>
     <string name="font_fallback_legacy_hint">Android 6–9 僅使用清單中第一個可用的字型。字型集合使用第一個字型。未設定的項目使用全域字型。</string>
     <string name="font_library">字型檔案</string>
@@ -34,4 +34,21 @@
     <string name="font_reset">重設字型設定</string>
     <string name="font_reset_hint">還原原始字型和大小，保留已匯入的檔案</string>
     <string name="font_reset_confirm">還原所有鍵盤文字的原始字型和大小？</string>
+    <string name="font_schema_settings">依 Rime 方案設定字型</string>
+    <string name="font_schema_hint">選擇方案後，分別設定候選詞、彈出按鍵和預編輯文字。未設定的項目沿用對應區域的通用字型和大小。</string>
+    <string name="font_schema_choose">Rime 方案</string>
+    <string name="font_schema_reset">清除此方案的專用設定</string>
+    <string name="font_schema_reset_hint">此方案恢復使用通用字型和大小</string>
+    <string name="font_schema_reset_confirm">讓「%1$s」恢復使用對應區域的通用字型和大小？</string>
+    <string name="font_schema_role">%1$s · %2$s</string>
+    <string name="font_schema_name_id">%1$s（%2$s）</string>
+    <string name="font_schema_other">其他方案 ID…</string>
+    <string name="font_schema_id_hint">例如：wubi06</string>
+    <string name="font_schema_id_help">如需設定清單之外的方案，請填寫方案 YAML 檔案中的 schema_id。</string>
+    <string name="font_schema_id_invalid">請輸入 1–128 個字母、數字、點、底線或連字號，並以字母或數字開頭。</string>
+    <string name="font_inherit_role">沿用%1$s通用設定</string>
+    <string name="font_schema_wubi06">新世紀五筆</string>
+    <string name="font_schema_wubi86">五筆86</string>
+    <string name="font_schema_wubi98">五筆98</string>
+    <string name="font_schema_ice">霧凇拼音</string>
 </resources>

@@ -34,12 +34,24 @@ open class PreeditUi(
 
     class CursorSpan(ctx: Context, @ColorInt color: Int, metrics: Paint.FontMetricsInt) :
         DynamicDrawableSpan() {
+        private val width = ctx.dp(1)
         private val drawable = ShapeDrawable(RectShape()).apply {
             paint.color = color
-            setBounds(0, metrics.ascent, ctx.dp(1), metrics.bottom)
+            setBounds(0, metrics.ascent, width, metrics.bottom)
         }
 
         override fun getDrawable() = drawable
+
+        override fun getSize(
+            paint: Paint, text: CharSequence, start: Int, end: Int,
+            fm: Paint.FontMetricsInt?
+        ): Int {
+            // The same preedit view survives schema/font changes. Measure its
+            // cursor with the current text paint instead of the original font.
+            val current = paint.fontMetricsInt
+            drawable.setBounds(0, current.ascent, width, current.bottom)
+            return super.getSize(paint, text, start, end, fm)
+        }
     }
 
     private val cursorSpan by lazy {

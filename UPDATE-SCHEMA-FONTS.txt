@@ -1,0 +1,24 @@
+Fcitx5 Android: schema-specific fonts + existing high-resolution Wubi hints
+
+Start with SCHEMA-FONTS.txt for Windows build/import/font-selection steps.
+This is a source UPDATE for your existing custom project, not a full checkout.
+Merge into the folder that contains gradlew.bat and settings.gradle.kts.
+Use the existing signing certificate when installing your rebuilt release APK.
+
+Font choices and sizes are separate for Candidates, Popup keys and Preedit.
+Use HeiTi.ttf for wubi06 and NVSans.ttf for wubi86/wubi98 in all three areas.
+Import your own fonts in Virtual keyboard -> Fonts first.
+No font binaries are bundled. Other key labels keep the ordinary font settings.
+
+Branch: feature/schema-specific-fonts
+Commit: 09a0fbf431854c546a05e356c895063ae44f7c91
+Cumulative overlay base (font-choice/AGP9.3): cc8af1deb40ca7f70316bc559f1212c449ae3897
+Included PATCH-FROM-HIRES.patch base (previous 2x image update): 3865c01bcda88b66be2914b776168337c0307b7f
+Use either the cumulative source overlay or the patch for the matching base.
+The patch can be applied with git apply PATCH-FROM-HIRES.patch in that checkout.
+For other local edits, review/merge the affected source files instead of blindly
+replacing your work. Toolchain, plugin, native source and signing files unchanged.
+
+61 targeted tests passed; Kotlin/Java/resources compiled. No signed APK built
+and no Android device UI test performed here. Rime data is delivered separately.
+The three 2560 x 874 root PNGs and their existing crop geometry are unchanged.
