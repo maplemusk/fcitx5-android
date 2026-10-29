@@ -164,6 +164,9 @@ class StatusAreaWindow : InputWindow.ExtendedInputWindow<StatusAreaWindow>(),
 
     val view by lazy {
         context.recyclerView {
+            // An active edge stretch can intercept taps on menu buttons at the
+            // scroll boundary. This compact action grid does not need overscroll.
+            overScrollMode = View.OVER_SCROLL_NEVER
             if (!keyBorder) {
                 backgroundColor = theme.barColor
             }

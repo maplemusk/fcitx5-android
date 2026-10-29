@@ -1,0 +1,14 @@
+diff --git a/app/src/main/java/org/fcitx/fcitx5/android/input/status/StatusAreaWindow.kt b/app/src/main/java/org/fcitx/fcitx5/android/input/status/StatusAreaWindow.kt
+index 5e0c372041e8a5b8c3d6a2cc3c48b8e2e6a8b4a5..66dfb5b92c1cf227fbdf2f1f3bb40bf463874802 100644
+--- a/app/src/main/java/org/fcitx/fcitx5/android/input/status/StatusAreaWindow.kt
++++ b/app/src/main/java/org/fcitx/fcitx5/android/input/status/StatusAreaWindow.kt
+@@ -164,6 +164,9 @@ class StatusAreaWindow : InputWindow.ExtendedInputWindow<StatusAreaWindow>(),
+ 
+     val view by lazy {
+         context.recyclerView {
++            // An active edge stretch can intercept taps on menu buttons at the
++            // scroll boundary. This compact action grid does not need overscroll.
++            overScrollMode = View.OVER_SCROLL_NEVER
+             if (!keyBorder) {
+                 backgroundColor = theme.barColor
+             }
